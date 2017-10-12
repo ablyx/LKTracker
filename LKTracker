@@ -1,0 +1,101 @@
+import copy
+import cv2
+import numpy as np
+from scipy.signal import convolve2d
+
+
+def largest_indices(ary, n):
+    """Returns the n largest indices from a numpy array."""
+    flat = ary.flatten()
+    indices = np.argpartition(flat, -n)[-n:]
+    indices = indices[np.argsort(-flat[indices])]
+    return np.unravel_index(indices, ary.shape)
+
+
+# frames are grayscale and of the same size
+def LKTracker(frame, next_frame, corners=200):
+    h, w = frame.shape[:2]
+    print(w,h)
+    print(frame[0].shape)
+    Ix = copy.deepcopy(frame)
+    print(Ix[0].shape)
+    Iy = copy.deepcopy(frame)
+    print('get gradient')
+    for x in range(w-1):
+        for y in range(h):
+            Ix[y][x] = int(frame[y][x+1]) - int(frame[y][x])
+
+    for x in range(w):
+        for y in range(h-1):
+            Iy[y][x] = int(frame[y + 1][x]) - int(frame[y][x])
+
+    Ixx = np.multiply(Ix,Ix)
+    Ixy = np.multiply(Ix, Iy)
+    Iyy = np.multiply(Iy, Iy)
+
+    print('get eig')
+    window = np.ones((13, 13))
+    Wxx = convolve2d(Ixx, window, mode='same')
+    Wxy = convolve2d(Ixy, window, mode='same')
+    Wyy = convolve2d(Iyy, window, mode='same')
+
+    I = copy.deepcopy(frame)
+    J = copy.deepcopy(next_frame)
+    bx = convolve2d(np.multiply((I - J),Ix), window, mode='same')
+    by = convolve2d(np.multiply((I - J), Iy), window, mode='same')
+    dx = np.zeros((h, w))
+    dy = np.zeros((h, w))
+    eigvals = np.zeros((h, w))
+    for x in range(w):
+        for y in range(h):
+            Z = np.matrix([[Wxx[y][x], Wxy[y][x]], [Wxx[y][x], Wyy[y][x]]])
+            vals, vec = np.linalg.eig(Z)
+            eigvals[y][x] = min(vals)
+
+    print('get mosaic eig')
+    for x in range(0,w,13):
+        for y in range(0, h, 13):
+            window = eigvals[y:y+13, x:x+13]
+            if window.shape!=(13,13):
+                continue
+            largest_eig = max(window.ravel())
+            if largest_eig == 0:
+                continue
+            print(largest_eig)
+            window = map(lambda row: map(lambda x: 0 if x!= largest_eig else x, row) ,window)
+            eigvals[y:y+13, x:x+13] = window
+
+    print('get direction')
+    for x in range(w):
+        for y in range(h):
+            if eigvals[y][x] != 0:
+                Z = np.matrix([[Wxx[y][x], Wxy[y][x]], [Wxx[y][x], Wyy[y][x]]])
+                try:
+                    Z_inv = np.linalg.inv(Z)
+                    b = np.matrix([[bx[y][x],],[by[y][x]],])
+                    dxx, dyy = np.dot(Z_inv, b)
+                    dx[y][x] = dxx
+                    dx[y][x] = dyy
+                except:
+                    continue
+
+    return dx, dy, eigvals
+
+
+cap = cv2.VideoCapture('source.mp4')
+ret, frame = cap.read()
+frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+cv2.imwrite('test.jpg', frame)
+ret, next_frame = cap.read()
+next_frame = cv2.cvtColor(next_frame, cv2.COLOR_BGR2GRAY)
+dx, dy, eigvals = LKTracker(frame, next_frame)
+print('track done, plot track')
+ex, ey = largest_indices(eigvals, 200)
+color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+for i, x in enumerate(ex):
+    y = ey[i]
+    cv2.circle(color_frame, (y-7,x-7), 2, (0,0,255), -1)
+
+cv2.imshow('color frame', color_frame)
+cv2.imwrite('corners.jpg', color_frame)
+cv2.waitKey(0)
