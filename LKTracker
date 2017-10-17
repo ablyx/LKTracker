@@ -17,6 +17,10 @@ def LKTracker(frame, next_frame, corners=200):
     h, w = frame.shape[:2]
     print(w,h)
     print(frame[0].shape)
+
+    # getting the derivatives
+    # Ix and Iy store the gx and gy (derivatives) values
+    # Ixx, Ixy and Iyy store the product of gx and gy
     Ix = copy.deepcopy(frame)
     print(Ix[0].shape)
     Iy = copy.deepcopy(frame)
@@ -33,18 +37,28 @@ def LKTracker(frame, next_frame, corners=200):
     Ixy = np.multiply(Ix, Iy)
     Iyy = np.multiply(Iy, Iy)
 
-    print('get eig')
+    # get Zd = b
+    # using a window of all ones instead of gaussian for speed (and convenience)
     window = np.ones((13, 13))
+    # convolve gradients with window of interest
+    # these W matrices are used to get Z
     Wxx = convolve2d(Ixx, window, mode='same')
     Wxy = convolve2d(Ixy, window, mode='same')
     Wyy = convolve2d(Iyy, window, mode='same')
 
+    # getting b
     I = copy.deepcopy(frame)
     J = copy.deepcopy(next_frame)
     bx = convolve2d(np.multiply((I - J),Ix), window, mode='same')
     by = convolve2d(np.multiply((I - J), Iy), window, mode='same')
+
+    # initial d
     dx = np.zeros((h, w))
     dy = np.zeros((h, w))
+
+    # each pixel in the image has a corresponding window which gives matrix Z
+    # getting the smallest eigenvalue of Z
+    print('get eig')
     eigvals = np.zeros((h, w))
     for x in range(w):
         for y in range(h):
@@ -52,25 +66,30 @@ def LKTracker(frame, next_frame, corners=200):
             vals, vec = np.linalg.eig(Z)
             eigvals[y][x] = min(vals)
 
+    # split the image into 13 by 13 windows
+    # for each window, take the highest eigenvalue and set the rest to 0
+    # identify which pixels are good features
     print('get mosaic eig')
     for x in range(0,w,13):
         for y in range(0, h, 13):
             window = eigvals[y:y+13, x:x+13]
+            # skip the edge case where the last window is not 13 by 13
             if window.shape!=(13,13):
                 continue
             largest_eig = max(window.ravel())
-            if largest_eig == 0:
-                continue
-            print(largest_eig)
             window = map(lambda row: map(lambda x: 0 if x!= largest_eig else x, row) ,window)
             eigvals[y:y+13, x:x+13] = window
 
+    # only track (get direction/movement for) good features
+    # only solve Zd = b when smallest eigenvalue of Z is large
+    # this eigenvalue has already been obtained
     print('get direction')
     for x in range(w):
         for y in range(h):
             if eigvals[y][x] != 0:
                 Z = np.matrix([[Wxx[y][x], Wxy[y][x]], [Wxx[y][x], Wyy[y][x]]])
                 try:
+                    # solve for d
                     Z_inv = np.linalg.inv(Z)
                     b = np.matrix([[bx[y][x],],[by[y][x]],])
                     dxx, dyy = np.dot(Z_inv, b)
@@ -81,15 +100,19 @@ def LKTracker(frame, next_frame, corners=200):
 
     return dx, dy, eigvals
 
-
+# lets see if my code works
+# get the first 2 frames
 cap = cv2.VideoCapture('source.mp4')
 ret, frame = cap.read()
 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-cv2.imwrite('test.jpg', frame)
 ret, next_frame = cap.read()
 next_frame = cv2.cvtColor(next_frame, cv2.COLOR_BGR2GRAY)
+# eigvals are gotten from the first frame
+# correspond to good features
+cv2.imwrite('test.jpg', frame)
 dx, dy, eigvals = LKTracker(frame, next_frame)
-print('track done, plot track')
+print('track done, plot corners')
+# plot the 200 best features
 ex, ey = largest_indices(eigvals, 200)
 color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 for i, x in enumerate(ex):
