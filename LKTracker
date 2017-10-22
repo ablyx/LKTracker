@@ -42,15 +42,15 @@ def LKTracker(frame, next_frame, corners=200):
     window = np.ones((13, 13))
     # convolve gradients with window of interest
     # these W matrices are used to get Z
-    Wxx = convolve2d(Ixx, window, mode='same')
-    Wxy = convolve2d(Ixy, window, mode='same')
-    Wyy = convolve2d(Iyy, window, mode='same')
+    Wxx = convolve2d(Ixx, window, mode='full')
+    Wxy = convolve2d(Ixy, window, mode='full')
+    Wyy = convolve2d(Iyy, window, mode='full')
 
     # getting b
     I = copy.deepcopy(frame)
     J = copy.deepcopy(next_frame)
-    bx = convolve2d(np.multiply((I - J),Ix), window, mode='same')
-    by = convolve2d(np.multiply((I - J), Iy), window, mode='same')
+    bx = convolve2d(np.multiply((I - J),Ix), window, mode='full')
+    by = convolve2d(np.multiply((I - J), Iy), window, mode='full')
 
     # initial d
     dx = np.zeros((h, w))
@@ -70,14 +70,11 @@ def LKTracker(frame, next_frame, corners=200):
     # for each window, take the highest eigenvalue and set the rest to 0
     # identify which pixels are good features
     print('get mosaic eig')
-    for x in range(0,w,13):
-        for y in range(0, h, 13):
+    for x in range(0,w-13,13):
+        for y in range(0, h-13, 13):
             window = eigvals[y:y+13, x:x+13]
-            # skip the edge case where the last window is not 13 by 13
-            if window.shape!=(13,13):
-                continue
             largest_eig = max(window.ravel())
-            window = map(lambda row: map(lambda x: 0 if x!= largest_eig else x, row) ,window)
+            window = map(lambda row: map(lambda x: 0 if x!= largest_eig else x, row), window)
             eigvals[y:y+13, x:x+13] = window
 
     # only track (get direction/movement for) good features
