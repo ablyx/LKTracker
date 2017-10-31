@@ -70,12 +70,26 @@ def LKTracker(frame, next_frame, corners=200):
     # for each window, take the highest eigenvalue and set the rest to 0
     # identify which pixels are good features
     print('get mosaic eig')
+
+    # only want 1 value in window to be non-zero
+    def choose_largest_eig(window):
+        largest_eig = max(window.ravel())
+        chosen = False
+        for row in window:
+            for i, r in enumerate(row):
+                if chosen:
+                    row[i] = 0
+                else:
+                    if r == largest_eig:
+                        chosen = True
+                    else:
+                        row[i] = 0
+        return window
+
     for x in range(0,w-13,13):
         for y in range(0, h-13, 13):
             window = eigvals[y:y+13, x:x+13]
-            largest_eig = max(window.ravel())
-            window = map(lambda row: map(lambda x: 0 if x!= largest_eig else x, row), window)
-            eigvals[y:y+13, x:x+13] = window
+            eigvals[y:y+13, x:x+13] = choose_largest_eig(window)
 
     # only track (get direction/movement for) good features
     # only solve Zd = b when smallest eigenvalue of Z is large
@@ -99,7 +113,7 @@ def LKTracker(frame, next_frame, corners=200):
 
 # lets see if my code works
 # get the first 2 frames
-cap = cv2.VideoCapture('source.mp4')
+cap = cv2.VideoCapture('test/clip.mp4')
 ret, frame = cap.read()
 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 ret, next_frame = cap.read()
@@ -114,8 +128,8 @@ ex, ey = largest_indices(eigvals, 200)
 color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 for i, x in enumerate(ex):
     y = ey[i]
-    cv2.circle(color_frame, (y-7,x-7), 2, (0,0,255), -1)
+    cv2.circle(color_frame, (y-7,x-7), 1, (0,0,255), -1)
 
 cv2.imshow('color frame', color_frame)
-cv2.imwrite('corners.jpg', color_frame)
+cv2.imwrite('corners200.jpg', color_frame)
 cv2.waitKey(0)
