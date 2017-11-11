@@ -136,8 +136,8 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
         next_feature_window = J[next_y - 6: next_y + 7, next_x - 6: next_x + 7]
         # w(I-J)
         window_diff = prev_feature_window - next_feature_window
-        bx = sum(np.multiply(window_diff, gx).ravel())
-        by = sum(np.multiply(window_diff, gy).ravel())
+        bx = sum(np.multiply(window_diff, gx[prev_y-6: prev_y+7, prev_x-6: prev_x+7]).ravel())
+        by = sum(np.multiply(window_diff, gy[prev_y-6: prev_y+7, prev_x-6: prev_x+7]).ravel())
         try:
             # solve for d
             Z_inv = np.linalg.inv(Z)
@@ -155,6 +155,10 @@ cap = cv2.VideoCapture('source.mp4')
 ret, frame = cap.read()
 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 frame1_features = get_features(frame)
+color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+for y,x in frame1_features:
+    cv2.circle(color_frame, (y, x), 1, (0, 0, 255), -1)
+cv2.imwrite('lk_test1.jpg', color_frame)
 
 ret, next_frame = cap.read()
 next_frame = cv2.cvtColor(next_frame, cv2.COLOR_BGR2GRAY)
@@ -163,23 +167,17 @@ result = LKTracker(frame, next_frame, frame1_features, frame2_features)
 
 ## Draw circles of LKTracker result on next_frame
 color_frame = cv2.cvtColor(next_frame, cv2.COLOR_GRAY2RGB)
-
+for y,x in result:
+    cv2.circle(color_frame, (y, x), 1, (0, 0, 255), -1)
+cv2.imwrite('lk_test2.jpg', color_frame)
 # eigvals are gotten from the first frame
 # correspond to good features
-cv2.imwrite('test.jpg', frame)
+# cv2.imwrite('test.jpg', frame)
 
 ## Testing LKTracker
 ##
-result = LKTracker
 
-def test_get_features():
-    frame = cv2.imread('test.jpg', 0)
-    features = get_features(frame)
-    color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-    print(features)
-    for y,x in features:
-        cv2.circle(color_frame, (y, x), 1, (0, 0, 255), -1)
-    cv2.imwrite('FEATURES200.jpg', color_frame)
+
 
 # dx, dy, eigvals = LKTracker(frame, next_frame)
 # print('track done, plot corners')
