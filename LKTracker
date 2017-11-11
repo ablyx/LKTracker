@@ -76,6 +76,17 @@ def get_features(frame0):
     return features
 
 
+def test_get_features():
+    frame = cv2.imread('test.jpg', 0)
+    features = get_features(frame)
+    color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+    print(features)
+    for y,x in features:
+        cv2.circle(color_frame, (y, x), 1, (0, 0, 255), -1)
+    cv2.imwrite('FEATURES200.jpg', color_frame)
+test_get_features()
+
+
 # frames are grayscale and of the same size
 def LKTracker(frame, next_frame, corners=200):
     frame = frame.astype('int16')
@@ -176,15 +187,16 @@ next_frame = cv2.cvtColor(next_frame, cv2.COLOR_BGR2GRAY)
 # eigvals are gotten from the first frame
 # correspond to good features
 cv2.imwrite('test.jpg', frame)
-dx, dy, eigvals = LKTracker(frame, next_frame)
-print('track done, plot corners')
-# plot the 200 best features
-ex, ey = largest_indices(eigvals, 200)
-color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-for i, x in enumerate(ex):
-    y = ey[i]
-    cv2.circle(color_frame, (y-7,x-7), 1, (0,0,255), -1)
 
-# cv2.imshow('color frame', color_frame)
-cv2.imwrite('corners200.jpg', color_frame)
-# cv2.waitKey(0)
+# dx, dy, eigvals = LKTracker(frame, next_frame)
+# print('track done, plot corners')
+# # plot the 200 best features
+# ex, ey = largest_indices(eigvals, 200)
+# color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+# for i, x in enumerate(ex):
+#     y = ey[i]
+#     cv2.circle(color_frame, (y-7,x-7), 1, (0,0,255), -1)
+#
+# # cv2.imshow('color frame', color_frame)
+# cv2.imwrite('corners200.jpg', color_frame)
+# # cv2.waitKey(0)
