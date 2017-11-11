@@ -60,12 +60,13 @@ def LKTracker(frame, next_frame, corners=200):
     # each pixel in the image has a corresponding window which gives matrix Z
     # getting the smallest eigenvalue of Z
     print('get eig')
-    eigvals = np.zeros((h, w))
-    for x in range(w):
-        for y in range(h):
-            Z = np.matrix([[Wxx[y][x], Wxy[y][x]], [Wxy[y][x], Wyy[y][x]]])
-            vals, vec = np.linalg.eig(Z)
-            eigvals[y][x] = min(vals)
+    wrows, wcols = Wyy.shape
+    eigvals = np.zeros((wrows, wcols))
+    for row in range(wrows):
+        for col in range(wcols):
+            W = np.matrix([[Wxx[row][col], Wxy[row][col]], [Wxy[row][col], Wyy[row][col]]])
+            vals, vec = np.linalg.eig(W)
+            eigvals[row][col] = min(vals)
 
     # split the image into 13 by 13 windows
     # for each window, take the highest eigenvalue and set the rest to 0
@@ -87,28 +88,33 @@ def LKTracker(frame, next_frame, corners=200):
                         row[i] = 0
         return window
 
-    for x in range(0,w-13,13):
-        for y in range(0, h-13, 13):
-            window = eigvals[y:y+13, x:x+13]
-            eigvals[y:y+13, x:x+13] = choose_largest_eig(window)
+    for row in range(0, wrows-13, 13):
+        for col in range(0, wcols-13, 13):
+            window = eigvals[row:row+13, col:col+13]
+            largest_eig = max(window.ravel())
+            window = map(lambda row: map(lambda x: 0 if x != largest_eig else x, row), window)
+            eigvals[row:row+13, col:col+13] = window
+            # window = eigvals[y:y+13, x:x+13]
+            # eigvals[y:y+13, x:x+13] = choose_largest_eig(window)
 
     # only track (get direction/movement for) good features
     # only solve Zd = b when smallest eigenvalue of Z is large
     # this eigenvalue has already been obtained
-    print('get direction')
-    for x in range(w):
-        for y in range(h):
-            if eigvals[y][x] != 0:
-                Z = np.matrix([[Wxx[y][x], Wxy[y][x]], [Wxy[y][x], Wyy[y][x]]])
-                try:
-                    # solve for d
-                    Z_inv = np.linalg.inv(Z)
-                    b = np.matrix([[bx[y][x],],[by[y][x]],])
-                    dxx, dyy = np.dot(Z_inv, b)
-                    dx[y][x] = dxx
-                    dx[y][x] = dyy
-                except:
-                    continue
+
+    # print('get direction')
+    # for x in range(w):
+    #     for y in range(h):
+    #         if eigvals[y][x] != 0:
+    #             Z = np.matrix([[Wxx[y][x], Wxy[y][x]], [Wxy[y][x], Wyy[y][x]]])
+    #             try:
+    #                 # solve for d
+    #                 Z_inv = np.linalg.inv(Z)
+    #                 b = np.matrix([[bx[y][x],],[by[y][x]],])
+    #                 dxx, dyy = np.dot(Z_inv, b)
+    #                 dx[y][x] = dxx
+    #                 dx[y][x] = dyy
+    #             except:
+    #                 continue
 
     return dx, dy, eigvals
 
