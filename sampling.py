@@ -23,11 +23,6 @@ def down_sample(im):
 
     return new_img
 
-## Takes an image and upsamples by a factor of 2
-def up_sample(im):
-
-    return
-
 # # Utility functions
 # def display_img(img, title):
 #     cv2.imshow(title, img)
