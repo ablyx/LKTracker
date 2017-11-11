@@ -14,28 +14,26 @@ def largest_indices(ary, n):
 
 # frames are grayscale and of the same size
 def LKTracker(frame, next_frame, corners=200):
-    h, w = frame.shape[:2]
-    print(w,h)
-    print(frame[0].shape)
+    rows, cols = frame.shape[:2]
+    print(rows, cols)
 
     # getting the derivatives
     # Ix and Iy store the gx and gy (derivatives) values
     # Ixx, Ixy and Iyy store the product of gx and gy
-    Ix = copy.deepcopy(frame)
-    print(Ix[0].shape)
-    Iy = copy.deepcopy(frame)
+    gx = copy.deepcopy(frame)
+    gy = copy.deepcopy(frame)
     print('get gradient')
-    for x in range(w-1):
-        for y in range(h):
-            Ix[y][x] = int(frame[y][x+1]) - int(frame[y][x])
+    for row in range(rows-1):
+        for col in range(cols):
+            gx[row][col] = int(frame[row+1][col]) - int(frame[row][col])
 
-    for x in range(w):
-        for y in range(h-1):
-            Iy[y][x] = int(frame[y + 1][x]) - int(frame[y][x])
+    for row in range(rows):
+        for col in range(cols-1):
+            gy[row][col] = int(frame[row][col+1]) - int(frame[row][col])
 
-    Ixx = np.multiply(Ix,Ix)
-    Ixy = np.multiply(Ix, Iy)
-    Iyy = np.multiply(Iy, Iy)
+    Ixx = np.multiply(gx, gx)
+    Ixy = np.multiply(gx, gy)
+    Iyy = np.multiply(gy, gy)
 
     # get Zd = b
     # using a window of all ones instead of gaussian for speed (and convenience)
@@ -45,16 +43,19 @@ def LKTracker(frame, next_frame, corners=200):
     Wxx = convolve2d(Ixx, window, mode='full')
     Wxy = convolve2d(Ixy, window, mode='full')
     Wyy = convolve2d(Iyy, window, mode='full')
+    print(Ixx.shape)
+    print(Wxx.shape)
 
     # getting b
     I = copy.deepcopy(frame)
     J = copy.deepcopy(next_frame)
-    bx = convolve2d(np.multiply((I - J),Ix), window, mode='full')
-    by = convolve2d(np.multiply((I - J), Iy), window, mode='full')
+    bx = convolve2d(np.multiply((I - J), gx), window, mode='full')
+    by = convolve2d(np.multiply((I - J), gy), window, mode='full')
 
     # initial d
-    dx = np.zeros((h, w))
-    dy = np.zeros((h, w))
+    wh, ww = Wxx.shape
+    dx = np.zeros((row, col))
+    dy = np.zeros((row, col))
 
     # each pixel in the image has a corresponding window which gives matrix Z
     # getting the smallest eigenvalue of Z
@@ -62,7 +63,7 @@ def LKTracker(frame, next_frame, corners=200):
     eigvals = np.zeros((h, w))
     for x in range(w):
         for y in range(h):
-            Z = np.matrix([[Wxx[y][x], Wxy[y][x]], [Wxx[y][x], Wyy[y][x]]])
+            Z = np.matrix([[Wxx[y][x], Wxy[y][x]], [Wxy[y][x], Wyy[y][x]]])
             vals, vec = np.linalg.eig(Z)
             eigvals[y][x] = min(vals)
 
@@ -98,7 +99,7 @@ def LKTracker(frame, next_frame, corners=200):
     for x in range(w):
         for y in range(h):
             if eigvals[y][x] != 0:
-                Z = np.matrix([[Wxx[y][x], Wxy[y][x]], [Wxx[y][x], Wyy[y][x]]])
+                Z = np.matrix([[Wxx[y][x], Wxy[y][x]], [Wxy[y][x], Wyy[y][x]]])
                 try:
                     # solve for d
                     Z_inv = np.linalg.inv(Z)
@@ -130,6 +131,6 @@ for i, x in enumerate(ex):
     y = ey[i]
     cv2.circle(color_frame, (y-7,x-7), 1, (0,0,255), -1)
 
-cv2.imshow('color frame', color_frame)
+# cv2.imshow('color frame', color_frame)
 cv2.imwrite('corners200.jpg', color_frame)
-cv2.waitKey(0)
+# cv2.waitKey(0)
