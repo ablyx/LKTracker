@@ -20,7 +20,7 @@ def write_img_array_to_video(img_arr, fps, video_path):
     print("Height", height)
     print("Width", width)
     print("Layers", layers)
-    video = cv2.VideoWriter(video_path,cv2.cv.CV_FOURCC('I', 'Y', 'U', 'V'),fps,(width,height))
+    video = cv2.VideoWriter(video_path,cv2.cv.CV_FOURCC(*'avc1'),fps,(width,height))
 
     for i in range(num_frames):
         video.write(img_arr[i])

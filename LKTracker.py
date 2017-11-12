@@ -70,7 +70,7 @@ def get_features(frame0):
 
     print('track done, plot corners')
     # plot the 200 best features
-    ex, ey = largest_indices(eigvals, 25)
+    ex, ey = largest_indices(eigvals, 50)
     for i, x in enumerate(ex):
         y = ey[i]
         features.append((y - 7, x - 7))
@@ -178,7 +178,7 @@ while True:
     # Get frame
     ret, frame = cap.read()
 
-    if frame is None or frame_counter >= 5:
+    if frame is None:
         break
     # Convert frame to greyscale
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
