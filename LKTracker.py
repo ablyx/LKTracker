@@ -2,6 +2,7 @@ import copy
 import cv2
 import numpy as np
 from scipy.signal import convolve2d
+from utils import *
 
 
 def largest_indices(ary, n):
@@ -69,7 +70,7 @@ def get_features(frame0):
 
     print('track done, plot corners')
     # plot the 200 best features
-    ex, ey = largest_indices(eigvals, 200)
+    ex, ey = largest_indices(eigvals, 25)
     for i, x in enumerate(ex):
         y = ey[i]
         features.append((y - 7, x - 7))
@@ -152,24 +153,56 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
 # lets see if my code works
 # get the first 2 frames
 cap = cv2.VideoCapture('source.mp4')
+fps = cap.get(cv2.cv.CV_CAP_PROP_FPS)
+print(fps)
+
+img_arr = []
+
+# First frame
 ret, frame = cap.read()
 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 frame1_features = get_features(frame)
 color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 for y,x in frame1_features:
     cv2.circle(color_frame, (y, x), 1, (0, 0, 255), -1)
-cv2.imwrite('lk_test1.jpg', color_frame)
+# cv2.imwrite('lk_test1.jpg', color_frame)
+img_arr.append(color_frame)
 
-ret, next_frame = cap.read()
-next_frame = cv2.cvtColor(next_frame, cv2.COLOR_BGR2GRAY)
-frame2_features = frame1_features
-result = LKTracker(frame, next_frame, frame1_features, frame2_features)
 
-## Draw circles of LKTracker result on next_frame
-color_frame = cv2.cvtColor(next_frame, cv2.COLOR_GRAY2RGB)
-for y,x in result:
-    cv2.circle(color_frame, (y, x), 1, (0, 0, 255), -1)
-cv2.imwrite('lk_test2.jpg', color_frame)
+## Looping to get the rest of the frames from video
+prev_features = frame1_features
+prev_frame = frame
+# Get remaining frames
+frame_counter = 0
+while True:
+    # Get frame
+    ret, frame = cap.read()
+
+    if frame is None or frame_counter >= 5:
+        break
+    # Convert frame to greyscale
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    frame_features = prev_features
+
+    # Get LKTracker feature coordinates
+    result = LKTracker(prev_frame, frame, prev_features, frame_features)
+
+    ## Draw circles of LKTracker result on this frame
+    color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+    for y,x in result:
+        cv2.circle(color_frame, (y, x), 1, (0, 0, 255), -1)
+    # cv2.imwrite('lk_test2.jpg', color_frame)
+    img_arr.append(color_frame)
+
+    # Update prev_features and prev_frame
+    prev_features = result
+    prev_frame = frame
+    frame_counter += 1
+    print(frame_counter)
+
+
+write_img_array_to_video(img_arr, fps, 'lk_test_vid.avi')
+
 # eigvals are gotten from the first frame
 # correspond to good features
 # cv2.imwrite('test.jpg', frame)
