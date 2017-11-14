@@ -8,8 +8,8 @@ from sampling import down_sample
 
 # cv2.cv.CV_CAP_PROP_FPS
 CV_CAP_PROP_FPS = 5
-NUM_FEATURES = 20
-DOWN_RES_LIMIT = 2*64
+NUM_FEATURES = 50
+DOWN_RES_LIMIT = 64
 
 ## Given two images, track the features from one image to the next using LK Tracker and Pyramid
 def down_sample_feature_coords(feature):
@@ -52,9 +52,9 @@ def largest_indices(ary, n):
 
 
 def get_features(frame0):
-    with open('features.pickle', 'rb') as pkl:
-        features = pickle.load(pkl)
-    return features
+    # with open('features.pickle', 'rb') as pkl:
+    #     features = pickle.load(pkl)
+    # return features
     features = []
     frame = frame0.astype('int16')
     rows, cols = frame.shape[:2]
@@ -190,7 +190,7 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
             # solve for d
             Z_inv = np.linalg.inv(Z)
             b = np.matrix([[bx], [by]])
-            dy, dx = np.dot(Z_inv, b)
+            dx, dy = np.dot(Z_inv, b)
             dx = int(dx)
             dy = int(dy)
             # print("Success")
@@ -223,6 +223,7 @@ cap = cv2.VideoCapture('test/clip2.mp4')
 
 fps = cap.get(CV_CAP_PROP_FPS)
 print(fps)
+
 
 img_arr = []
 
@@ -303,4 +304,3 @@ write_img_array_to_video(img_arr, fps, 'lk_test_vid.avi')
 # # cv2.imshow('color frame', color_frame)
 # cv2.imwrite('corners200.jpg', color_frame)
 # # cv2.waitKey(0)
-
