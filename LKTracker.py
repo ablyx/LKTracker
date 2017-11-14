@@ -52,6 +52,9 @@ def largest_indices(ary, n):
 
 
 def get_features(frame0):
+    with open('features.pickle', 'rb') as pkl:
+        features = pickle.load(pkl)
+    return features
     features = []
     frame = frame0.astype('int16')
     rows, cols = frame.shape[:2]
@@ -135,7 +138,7 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
     frame = frame.astype('int16')
     next_frame = next_frame.astype('int16')
     rows, cols = frame.shape[:2]
-    print(rows, cols)
+    # print(rows, cols)
 
 
     # getting the derivatives
@@ -190,7 +193,7 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
             dy, dx = np.dot(Z_inv, b)
             dx = int(dx)
             dy = int(dy)
-            print("Success")
+            # print("Success")
         except:
             print('error solving Zd = b')
             dx, dy = 0, 0
@@ -212,8 +215,8 @@ def test_LKTracker():
     # for y,x in features:
     #     cv2.circle(color_frame, (y, x), 1, (0, 0, 255), -1)
     # cv2.imwrite('FEATURES200.jpg', color_frame)
-test_LKTracker()
-"""
+# test_LKTracker()
+
 # lets see if my code works
 # get the first 2 frames
 cap = cv2.VideoCapture('test/clip2.mp4')
@@ -273,6 +276,8 @@ while True:
     frame_counter += 1
     print(frame_counter)
 
+with open('vid.pickle', 'wb') as output:
+    pickle.dump(img_arr, output, pickle.HIGHEST_PROTOCOL)
 
 write_img_array_to_video(img_arr, fps, 'lk_test_vid.avi')
 
@@ -298,4 +303,4 @@ write_img_array_to_video(img_arr, fps, 'lk_test_vid.avi')
 # # cv2.imshow('color frame', color_frame)
 # cv2.imwrite('corners200.jpg', color_frame)
 # # cv2.waitKey(0)
-"""
+
