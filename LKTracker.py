@@ -3,6 +3,42 @@ import cv2
 import numpy as np
 from scipy.signal import convolve2d
 from utils import *
+from sampling import down_sample
+
+# cv2.cv.CV_CAP_PROP_FPS
+CV_CAP_PROP_FPS = 5
+NUM_FEATURES = 20
+DOWN_RES_LIMIT = 64
+
+## Given two images, track the features from one image to the next using LK Tracker and Pyramid
+def down_sample_feature_coords(feature):
+    return [feature[0]/2, feature[1]/2]
+
+def up_sample_feature_coords(feature):
+    return [feature[0]*2, feature[1]*2]
+
+def get_feature_coords_for_next_frame(prev_frame, next_frame, prev_features):
+    prev_frame = frame.astype('int16')
+    next_frame = next_frame.astype('int16')
+    frame_res_row = prev_frame.shape[0]
+    frame_res_col = prev_frame.shape[1]
+    print("Frame res row: ", frame_res_row, "col: ", frame_res_col)
+    # Downsample to base case then "upsample" and LK when recursing up
+    # Base case
+    if frame_res_row <= DOWN_RES_LIMIT:
+        # Run LK Tracker and return result
+        return LKTracker(prev_frame, next_frame, prev_features, prev_features)
+
+    # Recurse
+    prev_frame_small = down_sample(prev_frame)
+    next_frame_small = down_sample(next_frame)
+    downsampled_features = [down_sample_feature_coords(feature) for feature in prev_features]
+
+    # LK Track based on features from previous recursion call
+    features_after_delta = get_feature_coords_for_next_frame(prev_frame_small, next_frame_small, downsampled_features)
+    upsampled_features_after_delta = [up_sample_feature_coords(feature) for feature in upsampled_features_after_delta]
+
+    return LKTracker(prev_frame, next_frame, prev_features, upsampled_features_after_delta)
 
 
 def largest_indices(ary, n):
@@ -70,7 +106,7 @@ def get_features(frame0):
 
     print('track done, plot corners')
     # plot the 200 best features
-    ex, ey = largest_indices(eigvals, 50)
+    ex, ey = largest_indices(eigvals, NUM_FEATURES)
     for i, x in enumerate(ex):
         y = ey[i]
         features.append((y - 7, x - 7))
@@ -145,19 +181,23 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
             # solve for d
             Z_inv = np.linalg.inv(Z)
             b = np.matrix([[bx], [by]])
-            dx, dy = np.dot(Z_inv, b)
+            dy, dx = np.dot(Z_inv, b)
+            dx = int(dx)
+            dy = int(dy)
             print("Success")
         except:
             print('error solving Zd = b')
             dx, dy = 0, 0
 
+        # Next frame features at higher res, but have not upsampled yet
         larger_reso_next_frame_features.append((next_y+dy, next_x+dx))
     return larger_reso_next_frame_features
 
 # lets see if my code works
 # get the first 2 frames
-cap = cv2.VideoCapture('test/clip.mp4')
-fps = cap.get(cv2.cv.CV_CAP_PROP_FPS)
+cap = cv2.VideoCapture('test/clip2.mp4')
+
+fps = cap.get(CV_CAP_PROP_FPS)
 print(fps)
 
 img_arr = []
@@ -190,6 +230,9 @@ while True:
     frame_features = prev_features
 
     # Get LKTracker feature coordinates
+    # Pyramid is not working yet
+    # result = get_feature_coords_for_next_frame(prev_frame, frame, prev_features)
+
     result = LKTracker(prev_frame, frame, prev_features, frame_features)
 
     ## Draw circles of LKTracker result on this frame
@@ -211,6 +254,7 @@ while True:
 
 
 write_img_array_to_video(img_arr, fps, 'lk_test_vid.avi')
+
 
 # eigvals are gotten from the first frame
 # correspond to good features
