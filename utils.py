@@ -24,7 +24,7 @@ def write_img_array_to_video(img_arr, fps, video_path):
     print("Width", width)
     print("Layers", layers)
 
-    video = cv2.VideoWriter('lk_test_vid.avi',cv2.VideoWriter_fourcc(*'MJPG'),fps,(width,height))
+    video = cv2.VideoWriter(video_path,cv2.VideoWriter_fourcc(*'MJPG'),fps,(width,height))
 
     for i in range(num_frames):
         video.write(img_arr[i])

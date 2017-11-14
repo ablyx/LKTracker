@@ -219,7 +219,7 @@ def test_LKTracker():
 
 # lets see if my code works
 # get the first 2 frames
-cap = cv2.VideoCapture('test/clip2.mp4')
+cap = cv2.VideoCapture('test/clip.mp4')
 
 fps = cap.get(CV_CAP_PROP_FPS)
 print(fps)
@@ -277,10 +277,10 @@ while True:
     frame_counter += 1
     print(frame_counter)
 
-with open('vid.pickle', 'wb') as output:
-    pickle.dump(img_arr, output, pickle.HIGHEST_PROTOCOL)
+# with open('vidnopyr.pickle', 'wb') as output:
+#     pickle.dump(img_arr, output, pickle.HIGHEST_PROTOCOL)
 
-write_img_array_to_video(img_arr, fps, 'lk_test_vid.avi')
+write_img_array_to_video(img_arr, fps, 'lk_clip_pyr.avi')
 
 
 # eigvals are gotten from the first frame
