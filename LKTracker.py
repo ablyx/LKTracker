@@ -199,7 +199,7 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
             dx, dy = 0, 0
 
         # Next frame features at higher res, but have not upsampled yet
-        larger_reso_next_frame_features.append((next_y+dy, next_x+dx))
+        larger_reso_next_frame_features.append((next_y-dy, next_x-dx))
     return larger_reso_next_frame_features
 
 def test_LKTracker():
@@ -280,7 +280,7 @@ while True:
 # with open('vidnopyr.pickle', 'wb') as output:
 #     pickle.dump(img_arr, output, pickle.HIGHEST_PROTOCOL)
 
-write_img_array_to_video(img_arr, fps, 'lk_clip_pyr.avi')
+write_img_array_to_video(img_arr, fps, 'lk_clip_minus_pyr.avi')
 
 
 # eigvals are gotten from the first frame
