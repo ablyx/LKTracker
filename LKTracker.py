@@ -1,6 +1,7 @@
 import copy
 import cv2
 import numpy as np
+import pickle
 from scipy.signal import convolve2d
 from utils import *
 from sampling import down_sample
@@ -8,7 +9,7 @@ from sampling import down_sample
 # cv2.cv.CV_CAP_PROP_FPS
 CV_CAP_PROP_FPS = 5
 NUM_FEATURES = 20
-DOWN_RES_LIMIT = 64
+DOWN_RES_LIMIT = 2*64
 
 ## Given two images, track the features from one image to the next using LK Tracker and Pyramid
 def down_sample_feature_coords(feature):
@@ -18,7 +19,7 @@ def up_sample_feature_coords(feature):
     return [feature[0]*2, feature[1]*2]
 
 def get_feature_coords_for_next_frame(prev_frame, next_frame, prev_features):
-    prev_frame = frame.astype('int16')
+    prev_frame = prev_frame.astype('int16')
     next_frame = next_frame.astype('int16')
     frame_res_row = prev_frame.shape[0]
     frame_res_col = prev_frame.shape[1]
@@ -33,10 +34,11 @@ def get_feature_coords_for_next_frame(prev_frame, next_frame, prev_features):
     prev_frame_small = down_sample(prev_frame)
     next_frame_small = down_sample(next_frame)
     downsampled_features = [down_sample_feature_coords(feature) for feature in prev_features]
-
+    print('Downsampled')
+    print(prev_frame_small.shape)
     # LK Track based on features from previous recursion call
     features_after_delta = get_feature_coords_for_next_frame(prev_frame_small, next_frame_small, downsampled_features)
-    upsampled_features_after_delta = [up_sample_feature_coords(feature) for feature in upsampled_features_after_delta]
+    upsampled_features_after_delta = [up_sample_feature_coords(feature) for feature in features_after_delta]
 
     return LKTracker(prev_frame, next_frame, prev_features, upsampled_features_after_delta)
 
@@ -173,6 +175,10 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
         prev_feature_window = I[prev_y-6: prev_y+7, prev_x-6: prev_x+7]
         next_y, next_x = next_frame_features[i]
         next_feature_window = J[next_y - 6: next_y + 7, next_x - 6: next_x + 7]
+        # skip the boundary cases
+        if prev_feature_window.shape != (13,13) or next_feature_window.shape != (13,13): 
+            larger_reso_next_frame_features.append((next_y+0, next_x+0))
+            continue
         # w(I-J)
         window_diff = prev_feature_window - next_feature_window
         bx = sum(np.multiply(window_diff, gx[prev_y-6: prev_y+7, prev_x-6: prev_x+7]).ravel())
@@ -193,6 +199,21 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
         larger_reso_next_frame_features.append((next_y+dy, next_x+dx))
     return larger_reso_next_frame_features
 
+def test_LKTracker():
+    frame0 = cv2.imread('lk_test0.jpg', 0)
+    frame1 = cv2.imread('lk_test1.jpg', 0)
+    with open('features.pickle', 'rb') as pkl:
+        features = pickle.load(pkl)
+    # features = get_features(frame0)
+    # with open('features.pickle', 'wb') as output:
+    #     pickle.dump(features, output, pickle.HIGHEST_PROTOCOL)
+    next_features = get_feature_coords_for_next_frame(frame0, frame1, features)
+    print(next_features)
+    # for y,x in features:
+    #     cv2.circle(color_frame, (y, x), 1, (0, 0, 255), -1)
+    # cv2.imwrite('FEATURES200.jpg', color_frame)
+test_LKTracker()
+"""
 # lets see if my code works
 # get the first 2 frames
 cap = cv2.VideoCapture('test/clip2.mp4')
@@ -231,9 +252,9 @@ while True:
 
     # Get LKTracker feature coordinates
     # Pyramid is not working yet
-    # result = get_feature_coords_for_next_frame(prev_frame, frame, prev_features)
+    result = get_feature_coords_for_next_frame(prev_frame, frame, prev_features)
 
-    result = LKTracker(prev_frame, frame, prev_features, frame_features)
+    # result = LKTracker(prev_frame, frame, prev_features, frame_features)
 
     ## Draw circles of LKTracker result on this frame
     color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
@@ -277,3 +298,4 @@ write_img_array_to_video(img_arr, fps, 'lk_test_vid.avi')
 # # cv2.imshow('color frame', color_frame)
 # cv2.imwrite('corners200.jpg', color_frame)
 # # cv2.waitKey(0)
+"""

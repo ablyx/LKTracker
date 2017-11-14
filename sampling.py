@@ -11,8 +11,8 @@ def down_sample(im):
     new_row_idx = 0
     new_col_idx = 0
 
-    for row_idx in range(0, num_rows, 2):
-        for col_idx in range(0, num_cols, 2):
+    for row_idx in range(0, num_rows-1, 2):
+        for col_idx in range(0, num_cols-1, 2):
             downsampled_pix_val = int(round((int(im[row_idx, col_idx]) + int(im[row_idx+1, col_idx]) + int(im[row_idx, col_idx+1]) + int(im[row_idx+1, col_idx+1])) / 4))
             new_img[new_row_idx, new_col_idx] = downsampled_pix_val
             new_col_idx += 1
