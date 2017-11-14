@@ -91,6 +91,8 @@ def test_get_features():
 # frames are grayscale and of the same size
 # should return centers of tracked features for better(larger) resolution of next_frame
 # returns the next next_frame_features
+
+#  Outputs the feature coords of the next frame, at the larger resolution
 def LKTracker(frame, next_frame, frame_features, next_frame_features):
     frame = frame.astype('int16')
     next_frame = next_frame.astype('int16')
@@ -142,11 +144,13 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
         try:
             # solve for d
             Z_inv = np.linalg.inv(Z)
-            b = np.matrix([bx, by])
+            b = np.matrix([[bx], [by]])
             dx, dy = np.dot(Z_inv, b)
+            print("Success")
         except:
             print('error solving Zd = b')
             dx, dy = 0, 0
+
         larger_reso_next_frame_features.append((next_y+dy, next_x+dx))
     return larger_reso_next_frame_features
 
@@ -162,6 +166,7 @@ img_arr = []
 ret, frame = cap.read()
 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 frame1_features = get_features(frame)
+print("Frame1 features:", frame1_features)
 color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 for y,x in frame1_features:
     cv2.circle(color_frame, (y, x), 1, (0, 0, 255), -1)
