@@ -130,7 +130,7 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
         Wxy = sum(Ixy[prev_y - 6: prev_y + 7, prev_x - 6: prev_x + 7].ravel())
         Wyy = sum(Iyy[prev_y - 6: prev_y + 7, prev_x - 6: prev_x + 7].ravel())
 
-        Z = np.matrix([[Wxx, Wyy], [Wxy, Wyy]])
+        Z = np.matrix([[Wxx, Wxy], [Wxy, Wyy]])
 
         prev_feature_window = I[prev_y-6: prev_y+7, prev_x-6: prev_x+7]
         next_y, next_x = next_frame_features[i]
@@ -152,7 +152,7 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
 
 # lets see if my code works
 # get the first 2 frames
-cap = cv2.VideoCapture('source.mp4')
+cap = cv2.VideoCapture('test/clip.mp4')
 fps = cap.get(cv2.cv.CV_CAP_PROP_FPS)
 print(fps)
 
@@ -191,7 +191,11 @@ while True:
     color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
     for y,x in result:
         cv2.circle(color_frame, (y, x), 1, (0, 0, 255), -1)
-    # cv2.imwrite('lk_test2.jpg', color_frame)
+
+    if frame_counter < 2:
+        f_name = 'lk_test' + str(frame_counter) + '.jpg'
+        cv2.imwrite(f_name, color_frame)
+
     img_arr.append(color_frame)
 
     # Update prev_features and prev_frame
