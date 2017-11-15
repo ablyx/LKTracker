@@ -8,7 +8,7 @@ from sampling import down_sample
 
 # cv2.cv.CV_CAP_PROP_FPS
 CV_CAP_PROP_FPS = 5
-NUM_FEATURES = 50
+NUM_FEATURES = 20
 DOWN_RES_LIMIT = 2*64
 WINDOW = 13
 WW = int(round(WINDOW/2))
@@ -91,12 +91,15 @@ def get_features(frame0):
 
     # each pixel in the image has a corresponding window which gives matrix Z
     # getting the smallest eigenvalue of Z
+    
     print('get eig')
     wrows, wcols = Wyy.shape
+    Zs = np.zeros((wrows, wcols, 2,2))
     eigvals = np.zeros((wrows, wcols))
     for row in range(wrows):
         for col in range(wcols):
             W = np.matrix([[Wxx[row][col], Wxy[row][col]], [Wxy[row][col], Wyy[row][col]]])
+            Zs[row][col] = W
             vals, vec = np.linalg.eig(W)
             eigvals[row][col] = min(vals)
 
@@ -114,11 +117,16 @@ def get_features(frame0):
 
     print('track done, plot corners')
     # plot the 200 best features
+    gdZs = []
     ey, ex = largest_indices(eigvals, NUM_FEATURES)
     for i, x in enumerate(ex):
         y = ey[i]
-        features.append((y-7, x-7))
-    return features
+        # this is correct. the Z matches for nonconv if nonconv just takes in y,x
+        # features.append((y-WW, x-WW))
+        gdZs.append(Zs[y][x])
+        # this is for conv
+        features.append((y, x))
+    return features, gdZs
 
 
 def test_get_features():
@@ -171,6 +179,7 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
     J = copy.deepcopy(next_frame)
 
     result_features = []
+    Zs = np.zeros((NUM_FEATURES, 2, 2))
     # feature is in the form (y,x)
     # print(frame_features)
     for i, prev_feature in enumerate(frame_features):
@@ -189,6 +198,7 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
         Wyy = sum(Iyy[y_start: y_end, x_start: x_end].ravel())
 
         Z = np.matrix([[Wxx, Wxy], [Wxy, Wyy]])
+        Zs[i] = Z
         prev_feature_window = I[y_start: y_end, x_start: x_end]
         next_y, next_x = next_frame_features[i]
         next_x_start = max(0, next_x - WW)
@@ -202,7 +212,7 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
         next_feature_window = J[next_y_start: next_y_end, next_x_start: next_x_end]
         # # skip the boundary cases
         if prev_feature_window.shape != (WINDOW,WINDOW) or next_feature_window.shape != (WINDOW,WINDOW): 
-            larger_reso_next_frame_features.append((next_y+0, next_x+0))
+            result_features.append((next_y+0, next_x+0))
             continue
         ## w(I-J)
         window_diff = prev_feature_window - next_feature_window
@@ -215,25 +225,27 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
             Z_inv = np.linalg.inv(Z)
             # print('inverse')
             b = np.matrix([[bx], [by]])
+            # print(b)
             d = np.dot(Z_inv, b)
             # print('dot')
             dx, dy = d
             dx = int(round(dx))
             dy = int(round(dy))
-            ny, nx = (next_y+dx, next_x+dy)
+            ny, nx = (next_y-dy, next_x-dx)
+            # print(d)
             if (dx,dy)!=(0,0):
-                print(d)
                 print(dx,dy)
         except:
             print('error solving Zd = b')
             dx, dy = 0, 0
+            ny, nx = 0, 0
 
         # Next frame features at higher res, but have not upsampled yet
         # next frame features shld nt be negative
         # set to (0,0) if negative
-        result_features.append((next_y+dx, next_x+dy))
-    return result_features
-"""
+        result_features.append((ny, nx))
+    return result_features, Zs
+
 #  Outputs the feature coords of the next frame, only small movments
 def LKTrackerConv(frame, next_frame, frame_features, next_frame_features):
     frame = frame.astype('int16')
@@ -276,6 +288,7 @@ def LKTrackerConv(frame, next_frame, frame_features, next_frame_features):
     IminusJgy = convolve2d(np.multiply(I-J, gy), window, mode='full')
 
     next_frame_features = []
+    Zs = np.zeros((NUM_FEATURES, 2, 2))
     # feature is in the form (y,x)
     # print(frame_features)
     for i, prev_feature in enumerate(frame_features):
@@ -285,6 +298,7 @@ def LKTrackerConv(frame, next_frame, frame_features, next_frame_features):
         #     larger_reso_next_frame_features.append((0, 0))
         # TAKE NOTE OF NEGATIVE INDEXES
         Z = np.matrix([[Wxx[prev_y][prev_x], Wxy[prev_y][prev_x]], [Wxy[prev_y][prev_x], Wyy[prev_y][prev_x]]])
+        Zs[i] = Z
         bx = IminusJgx[prev_y][prev_x]
         by = IminusJgy[prev_y][prev_x]
         try:
@@ -307,27 +321,38 @@ def LKTrackerConv(frame, next_frame, frame_features, next_frame_features):
         # Next frame features at higher res, but have not upsampled yet
         # next frame features shld nt be negative
         # set to (0,0) if negative
-        next_frame_features.append((prev_y+dy, prev_x+dx))
-    return next_frame_features
-"""
+        next_frame_features.append((prev_y-dy, prev_x-dx))
+    return next_frame_features, Zs
+
 def test_LKTracker():
-    frame0 = cv2.imread('lk_test0.jpg', 0)
-    frame1 = cv2.imread('lk_test1.jpg', 0)
+    frame0 = cv2.imread('test/t1.jpeg', 0)
+    frame1 = cv2.imread('test/t4.jpeg', 0)
+    
     # with open('features.pickle', 'rb') as pkl:
     #     features = pickle.load(pkl)
-    features = get_features(frame0)
+    features, z = get_features(frame0)
+    print(features)
+    # print(z)
+    color_frame = cv2.cvtColor(frame0, cv2.COLOR_GRAY2RGB)
+    for y,x in features:
+        cv2.circle(color_frame, (x, y), 1, (0, 0, 255), -1)
+    cv2.imwrite('im1features.jpg', color_frame)
     # with open('features.pickle', 'wb') as output:
     #     pickle.dump(features, output, pickle.HIGHEST_PROTOCOL)
-    next_features = LKTracker(frame0, frame1, features, features)
+    next_features,z = LKTrackerConv(frame0, frame1, features, features)
     print(next_features)
-    # for y,x in features:
-    #     cv2.circle(color_frame, (y, x), 1, (0, 0, 255), -1)
-    # cv2.imwrite('FEATURES200.jpg', color_frame)
-# test_LKTracker()
-
+    # print(z)
+    color_frame = cv2.cvtColor(frame1, cv2.COLOR_GRAY2RGB)
+    for y,x in next_features:
+        cv2.circle(color_frame, (x, y), 1, (0, 0, 255), -1)
+    cv2.imwrite('im2features.jpg', color_frame)
+    # features = get_features(frame1)
+    # print(features)
+test_LKTracker()
+"""
 # lets see if my code works
 # get the first 2 frames
-cap = cv2.VideoCapture('test/clip2.mp4')
+cap = cv2.VideoCapture('test/clip.mp4')
 
 fps = cap.get(CV_CAP_PROP_FPS)
 print(fps)
@@ -391,7 +416,7 @@ while True:
 # with open('vidnopyr.pickle', 'wb') as output:
 #     pickle.dump(img_arr, output, pickle.HIGHEST_PROTOCOL)
 
-write_img_array_to_video(img_arr, fps, 'lk_small_motion_noconv.avi')
+write_img_array_to_video(img_arr, fps, 'lk_clip_noconv.avi')
 
 
 # eigvals are gotten from the first frame
@@ -415,4 +440,4 @@ write_img_array_to_video(img_arr, fps, 'lk_small_motion_noconv.avi')
 # # cv2.imshow('color frame', color_frame)
 # cv2.imwrite('corners200.jpg', color_frame)
 # # cv2.waitKey(0)
-
+"""
