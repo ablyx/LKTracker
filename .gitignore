@@ -4,3 +4,4 @@ test/clip.mp4
 test/noclip.mp4
 big/vid.pickle
 big/
+__pycache__/
