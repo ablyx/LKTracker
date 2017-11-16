@@ -1,4 +1,4 @@
-from homography import warp_subimage
+from homography import new_warp_subimage
 from utils import *
 """
 video = None
@@ -68,18 +68,21 @@ print('orig_pts', orig_pts)
 print('vortex_pts', vortex_pts)
 rows = (p4-p1)[0]
 cols = (p4-p1)[1]
-vortex_corner_pts = [(0, 0), (cols, 0), (cols, rows), (0, rows)]
-
+vortex_corner_pts = [(0, 0), (0, rows-1), (cols-1, 0), (cols-1, rows-1)]
+vortex_corner_pts = map(lambda p: np.array(p), vortex_corner_pts)
+p1, p2, p3, p4 = vortex_corner_pts
 # print(vortex_pts)
 vortex = cv2.imread('test2.jpg')
-# print( ((p4 - p1)[1], (p4-p1)[0]))
-vortex = cv2.resize(vortex, (((p4-p1)[0]), (p4 - p1)[1])) # y,x
+cv2.imshow('test2',vortex)
+print( ((p4 - p1)[1], (p4-p1)[0]))
+vortex = cv2.resize(vortex, (((p4-p1)[1]), (p4 - p1)[0])) # y,x
+cv2.imshow('test2',vortex)
 firstFrame = old_frame
-firstFrameVortex = warp_subimage(firstFrame, vortex, vortex_pts, orig_pts)
-# cv2.namedWindow("vortex", cv2.WINDOW_NORMAL)
+firstFrameVortex = new_warp_subimage(firstFrame, vortex, orig_pts)
+cv2.namedWindow("vortex", cv2.WINDOW_NORMAL)
 img_arr = [firstFrameVortex,]
-# cv2.imshow('vortex',firstFrameVortex)
-# cv2.waitKey(0)
+cv2.imshow('vortex',firstFrameVortex)
+cv2.waitKey(0)
 
 # Create a mask image for drawing purposes
 mask = np.zeros_like(old_frame)
@@ -100,7 +103,7 @@ while(counter<300):
     # print('gn', good_new[0])
     # print('good new', list(map(lambda p:list(p), good_new[0])))
     # draw the tracks
-    frameVortex = warp_subimage(frame, vortex, vortex_pts, good_new)
+    frameVortex = new_warp_subimage(frame, vortex, good_new)
     img_arr.append(frameVortex)
     # for i,(new,old) in enumerate(zip(good_new,good_old)):
 
@@ -126,3 +129,4 @@ while(counter<300):
 # cv2.destroyAllWindows()
 write_img_array_to_video(img_arr, fps, 'homo_long_anchor.avi')
 # cap.release()
+

@@ -103,7 +103,7 @@ def homo_mat(mat):
     V = np.transpose(V)
     h = (1/V[-1,-1])*V[:,-1]
     return np.reshape(h, (3,3))
-
+"""
 # orig pts are saved from the first frame
 # to_warp_pts are the tracked points
 def warp_subimage(image, subimage, orig_pts, to_warp_pts):
@@ -134,7 +134,7 @@ def warp_subimage(image, subimage, orig_pts, to_warp_pts):
 
     rows, cols, s = subimage.shape
     # test if h works
-    op = [[0,0], [0, cols-1], [rows-1, 0], [rows-1, cols-1]]
+    op = orig_pts
     for i, pt in enumerate(pts):
         u, v, ut, vt = pt
         r, c = op[i]
@@ -173,6 +173,67 @@ def warp_subimage(image, subimage, orig_pts, to_warp_pts):
             except:
                 # print('fail')
                 pass
+    return image
+"""
+def new_warp_subimage(image, subimage, board_pts):
+    # warping vortex to board
+    #calculate offet from to left corner of subimage
+    # print('op0', orig_pts[0])
+    # offset = orig_pts[0] # this is in the form x, y
+    # print('offset',offset)
+    # orig_pts is of form [(u0,v0), p1, ...]
+    # pts is of form [(u1, v1, u1t, v1t), (u2, v2, u2t, v2t), ...]
+    pts = []
+    # print('to_warp_pts', to_warp_pts)
+    # print('to_warp_pts', list(map(lambda p:list(p), to_warp_pts)))
+    rows, cols, s = subimage.shape
+    vortex_pts = [(0,0), (rows-1, 0), (0, cols-1), (rows-1, cols-1)]
+    for i, vp in enumerate(vortex_pts):
+        u, v = vp
+        # print('i', to_warp_pts[i])
+        ut, vt = board_pts[i]
+        pts.append((u, v, ut, vt))
+
+    u, v, ut, vt = pts[0]
+    # print(u, v, ut, vt)
+    bm = small_mat(u, v, ut, vt)
+    for pt in pts[1:]:
+        u, v, ut, vt = pt
+        sm = small_mat(u, v, ut, vt)
+        bm = np.vstack((bm,sm))
+    h = homo_mat(bm)
+
+    
+    
+    # test if h works
+    op = vortex_pts
+    for i, pt in enumerate(pts):
+        u, v, ut, vt = pt
+        r, c = op[i]
+        print('ut vt:', ut, vt)
+        print('ut vt:', warp((u, v), h))
+        print('r c:' , (r,c))
+        print('hr hc:', warp((r,c), h))
+
+    # print(h)
+    
+    for r, row in enumerate(subimage):
+        for c, pixel in enumerate(row):
+            new_coord = warp((r,c),h)
+            x, y, z = new_coord
+            x = int(round(x))
+            y = int(round(y))
+            # print('yx:',y,x)
+            image_warped_coord = (y,x)
+            # 
+            try:
+                image[image_warped_coord] = subimage[(r,c)]
+                # print('success')
+            except:
+                print('fail')
+                print('cr:',(c,r))
+                pass
+    print('shape:' , rows, cols)
     return image
 
 
@@ -240,7 +301,7 @@ def cvhomo(img, pts):
     warped_img = cv2.warpPerspective(img, h, (img.shape[1], img.shape[0]))
     return warped_img
 
-    
+
 if __name__ == "main":
     test(pts, img, to_warp)
     # warped_img = warp_img(img, pts)
