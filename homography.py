@@ -187,7 +187,7 @@ def new_warp_subimage(image, subimage, board_pts):
     # print('to_warp_pts', to_warp_pts)
     # print('to_warp_pts', list(map(lambda p:list(p), to_warp_pts)))
     rows, cols, s = subimage.shape
-    vortex_pts = [(0,0), (rows-1, 0), (0, cols-1), (rows-1, cols-1)]
+    vortex_pts = [(0,0), (rows-1, 0), (0, cols-1), (rows-1, cols-1)] # in the form of x,y 
     for i, vp in enumerate(vortex_pts):
         u, v = vp
         # print('i', to_warp_pts[i])
@@ -203,37 +203,26 @@ def new_warp_subimage(image, subimage, board_pts):
         bm = np.vstack((bm,sm))
     h = homo_mat(bm)
 
-    
-    
-    # test if h works
-    op = vortex_pts
-    for i, pt in enumerate(pts):
-        u, v, ut, vt = pt
-        r, c = op[i]
-        print('ut vt:', ut, vt)
-        print('ut vt:', warp((u, v), h))
-        print('r c:' , (r,c))
-        print('hr hc:', warp((r,c), h))
 
     # print(h)
-    
     for r, row in enumerate(subimage):
         for c, pixel in enumerate(row):
+            # for vortex, maybe I can skip the corners?
+            
             new_coord = warp((r,c),h)
             x, y, z = new_coord
             x = int(round(x))
             y = int(round(y))
-            # print('yx:',y,x)
             image_warped_coord = (y,x)
-            # 
             try:
-                image[image_warped_coord] = subimage[(r,c)]
-                # print('success')
+                image[image_warped_coord] = pixel
+                # rounding error might cause some pixels not to show
+                for i in range(2):
+                    for j in range(2):
+                        # print('test', y, x)
+                        image[(y+i,x+j)] = pixel
             except:
-                print('fail')
-                print('cr:',(c,r))
-                pass
-    print('shape:' , rows, cols)
+                print('failed')
     return image
 
 

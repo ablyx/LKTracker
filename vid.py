@@ -72,7 +72,7 @@ vortex_corner_pts = [(0, 0), (0, rows-1), (cols-1, 0), (cols-1, rows-1)]
 vortex_corner_pts = map(lambda p: np.array(p), vortex_corner_pts)
 p1, p2, p3, p4 = vortex_corner_pts
 # print(vortex_pts)
-vortex = cv2.imread('test2.jpg')
+vortex = cv2.imread('v2.jpg')
 cv2.imshow('test2',vortex)
 print( ((p4 - p1)[1], (p4-p1)[0]))
 vortex = cv2.resize(vortex, (((p4-p1)[1]), (p4 - p1)[0])) # y,x
@@ -127,6 +127,6 @@ while(counter<300):
     print(counter)
 
 # cv2.destroyAllWindows()
-write_img_array_to_video(img_arr, fps, 'homo_long_anchor.avi')
+write_img_array_to_video(img_arr, fps, 'gg.avi')
 # cap.release()
 
