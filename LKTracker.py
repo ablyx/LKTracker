@@ -197,7 +197,7 @@ def get_features(frame0):
 def test_get_features():
     frame = cv2.imread('test2.jpg', 0)
     # do gaussian blur first to remove noise that might affect the feature detection
-    frame = cv2.GaussianBlur(frame,(5,5),0)
+    frame = cv2.GaussianBlur(frame,(5,5),30)
     cv2.imwrite('blur.jpg', frame)
     features, gdZs = get_features(frame)
     color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
@@ -205,7 +205,7 @@ def test_get_features():
     for y,x in features:
         cv2.circle(color_frame, (x, y), 13, (0, 0, 255), 1)
     cv2.imwrite('getfeatures.jpg', color_frame)
-test_get_features()
+# test_get_features()
 
 
 # frames are grayscale and of the same size
@@ -214,12 +214,10 @@ test_get_features()
 
 #  Outputs the feature coords of the next frame, at the larger resolution
 def LKTracker(frame, next_frame, frame_features, next_frame_features):
-    frame = frame.astype('int16')
-    next_frame = next_frame.astype('int16')
+    frame = frame.astype('float64')
+    next_frame = next_frame.astype('float64')
     rows, cols = frame.shape[:2]
     # print(rows, cols)
-
-
     # getting the derivatives
     # Ix and Iy store the gx and gy (derivatives) values
     # Ixx, Ixy and Iyy store the product of gx and gy
@@ -228,11 +226,11 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
     print('get gradient')
     for row in range(rows-1):
         for col in range(cols):
-            gx[row][col] = int(frame[row+1][col]) - int(frame[row][col])
+            gy[row][col] = int(frame[row+1][col]) - int(frame[row][col])
 
     for row in range(rows):
         for col in range(cols-1):
-            gy[row][col] = int(frame[row][col+1]) - int(frame[row][col])
+            gx[row][col] = int(frame[row][col+1]) - int(frame[row][col])
 
     Ixx = np.multiply(gx, gx)
     Ixy = np.multiply(gx, gy)
@@ -269,34 +267,36 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
 
         try:
             Z_inv = np.linalg.inv(Z)
+            # get higher order for taylor series until threshold
+            for i in range(MAX_ITER):
+                next_y_start, next_y_end, next_x_start, next_x_end = get_frame_window(next_y, next_x, rows, cols)
+                # print(next_y_start, next_y_end, next_x_start, next_x_end)
+                next_feature_window = J[next_y_start: next_y_end, next_x_start: next_x_end]
+                # # skip the boundary cases
+                if prev_feature_window.shape != (WINDOW,WINDOW) or next_feature_window.shape != (WINDOW,WINDOW):
+                    # result_features.append((next_y+0, next_x+0))
+                    break
+                ## w(I-J)
+                window_diff = prev_feature_window - next_feature_window
+                bx = sum(np.multiply(window_diff, gx[y_start: y_end, x_start: x_end]).ravel())
+                by = sum(np.multiply(window_diff, gy[y_start: y_end, x_start: x_end]).ravel())
+                b = np.matrix([[bx], [by]]).astype('float64')
+                d = np.dot(Z_inv, b)
+                print(d)
+                d = Z_inv * b
+                print(d)
+                dx, dy = d
+                ny, nx = ny+dy, nx+dx
+                next_y, next_x = int(round(ny)), int(round(nx))
+                if max(abs(d)) < THRESHOLD:
+                    break
+            print((next_y, next_x))
+            result_features.append((next_y, next_x))
         except:
             print('error solving Zd = b')
             ny, nx = 0, 0
             result_features.append((ny, nx))
-            continue
-        # get higher order for taylor series until threshold
-        for i in range(MAX_ITER):
-            next_y_start, next_y_end, next_x_start, next_x_end = get_frame_window(next_y, next_x, rows, cols)
-            # print(next_y_start, next_y_end, next_x_start, next_x_end)
-            next_feature_window = J[next_y_start: next_y_end, next_x_start: next_x_end]
-            # # skip the boundary cases
-            if prev_feature_window.shape != (WINDOW,WINDOW) or next_feature_window.shape != (WINDOW,WINDOW):
-                result_features.append((next_y+0, next_x+0))
-                continue
-            ## w(I-J)
-            window_diff = prev_feature_window - next_feature_window
-            bx = sum(np.multiply(window_diff, gx[y_start: y_end, x_start: x_end]).ravel())
-            by = sum(np.multiply(window_diff, gy[y_start: y_end, x_start: x_end]).ravel())
-            b = np.matrix([[bx], [by]])
-            d = np.dot(Z_inv, b)
-            print(d)
-            dx, dy = d
-            ny, nx = ny+dy, nx+dx
-            next_y, next_x = int(round(ny)), int(round(nx))
-            if max(abs(d)) < THRESHOLD:
-                break
-        print((next_y, next_x))
-        result_features.append((next_y, next_x))
+        
     return result_features, Zs
 
 def get_frame_window(y, x, rows, cols):
@@ -309,42 +309,119 @@ def get_frame_window(y, x, rows, cols):
 
 
 def test_LKTracker():
-    frame0 = cv2.imread('test/t1.jpeg', 0)
-    frame1 = cv2.imread('test/t4.jpeg', 0)
+    frame0 = cv2.imread('test/t3.jpeg', 0)
+    frame1 = cv2.imread('test/t5.jpeg', 0)
 
     # with open('features.pickle', 'rb') as pkl:
     #     features = pickle.load(pkl)
-    features, z = get_features(frame0)
-    print(features)
-    print(z[0])
+    # do gaussian blur first to remove noise that might affect the feature detection
+    frame0 = cv2.GaussianBlur(frame0,(5,5),30)
+    frame1 = cv2.GaussianBlur(frame1,(5,5),30)
+    # cv2.imshow('test', frame0)
+    # cv2.waitKey(0)
+    # features, z = get_features(frame0)
+    #y,x for t3.jpeg
+    features = [(235, 367), (355, 360), (235, 551), (354, 590)]
+    #y,x for t1.jpeg [363, 235], [548, 235], [587, 355], [354, 356]
+    # features = [(235, 363), (356, 354), (235, 548), (355, 587)]
+
+    prev_features = copy.deepcopy(features)
+    print(len(prev_features))
+    # print(z[0])
     color_frame0 = cv2.cvtColor(frame0, cv2.COLOR_GRAY2RGB)
 
     # with open('features.pickle', 'wb') as output:
     #     pickle.dump(features, output, pickle.HIGHEST_PROTOCOL)
 
     # LKTracker Without Pyramid
-    # next_features,z = LKTracker(frame0, frame1, features, features)
+    next_features,z = LKTracker(frame0, frame1, features, features)
 
     # LKTracker With Pyramid
-    next_features,z = get_feature_coords_for_next_frame_iterative(frame0, frame1, features)
+    # next_features,z = get_feature_coords_for_next_frame_iterative(frame0, frame1, features)
 
-    print(next_features)
+    print(len(next_features))
     print(z[0])
     color_frame1 = cv2.cvtColor(frame1, cv2.COLOR_GRAY2RGB)
 
     for y,x in features:
-        cv2.circle(color_frame0, (x, y), 13, (255, 0, 0), 1)
-        cv2.circle(color_frame1, (x, y), 13, (255, 0, 0), 1)
-    cv2.imwrite('im1features.jpg', color_frame0)
+        # print(y,x)
+        cv2.rectangle(color_frame0, (x-6, y-6), (x+7,y+7), (255, 0, 0), 1)
+        cv2.rectangle(color_frame1, (x-6, y-6), (x+7,y+7), (255, 0, 0), 1)
+    
 
     for i ,(y,x) in enumerate(next_features):
-        cv2.circle(color_frame1, (x, y), 13, (0, 0, 255), 1)
-        old_y, old_x = features[i]
-        cv2.line(color_frame1, (x, y), (old_x, old_y), (0,255,0), 2)
+        cv2.rectangle(color_frame1, (x-6, y-6), (x+7,y+7), (0, 0, 255), 1)
+        old_y, old_x = prev_features[i]
+        cv2.line(color_frame0, (x, y), (old_x, old_y), (0,255,0), 2)
+    cv2.imwrite('im1features.jpg', color_frame0)
     cv2.imwrite('im2features.jpg', color_frame1)
     # features = get_features(frame1)
     # print(features)
 test_LKTracker()
+
+
+def LKTrackerOnVideo():
+    cap = cv2.VideoCapture('test/clip.mp4')
+
+    fps = cap.get(CV_CAP_PROP_FPS)
+    print(fps)
+
+
+    img_arr = []
+
+    # First frame
+    ret, frame = cap.read()
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    frame1_features = get_features(frame)
+    print("Frame1 features:", frame1_features)
+    color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+    for y,x in frame1_features:
+        cv2.circle(color_frame, (x, y), 1, (0, 0, 255), -1)
+    # cv2.imwrite('lk_test1.jpg', color_frame)
+    cv2.imwrite('lk_test0.jpg', color_frame)
+    img_arr.append(color_frame)
+
+
+    ## Looping to get the rest of the frames from video
+    prev_features = frame1_features
+    prev_frame = frame
+    # Get remaining frames
+    frame_counter = 1
+    # while frame_counter<50:
+    while True:
+        # Get frame
+        ret, frame = cap.read()
+
+        if frame is None:
+            break
+        # Convert frame to greyscale
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frame_features = prev_features
+
+        # Get LKTracker feature coordinates
+        # Pyramid is not working yet
+        # result = get_feature_coords_for_next_frame(prev_frame, frame, prev_features)
+
+        result = LKTracker(prev_frame, frame, prev_features, frame_features)
+        # result = LKTrackerConv(prev_frame, frame, prev_features, frame_features)
+
+        ## Draw circles of LKTracker result on this frame
+        color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+        for y,x in result:
+            cv2.circle(color_frame, (x, y), 1, (0, 0, 255), -1)
+
+        if frame_counter < 2:
+            f_name = 'lk_test' + str(frame_counter) + '.jpg'
+            cv2.imwrite(f_name, color_frame)
+
+        img_arr.append(color_frame)
+
+        # Update prev_features and prev_frame
+        prev_features = result
+        prev_frame = frame
+        frame_counter += 1
+        print(frame_counter)
+    write_img_array_to_video(img_arr, fps, 'lk_clip_noconv.avi')    
 """
 # lets see if my code works
 # get the first 2 frames
