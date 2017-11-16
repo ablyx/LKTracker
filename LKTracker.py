@@ -10,7 +10,7 @@ from sampling import down_sample
 # cv2.cv.CV_CAP_PROP_FPS
 CV_CAP_PROP_FPS = 5
 NUM_FEATURES = 5
-DOWN_RES_LIMIT = 2*64
+DOWN_RES_LIMIT = 64
 WINDOW = 13
 WW = int(round(WINDOW/2))
 THRESHOLD = 0.05
@@ -19,10 +19,16 @@ MAX_ITER = 10
 ## Given two images, track the features from one image to the next using LK Tracker and Pyramid
 def down_sample_feature_coords(feature):
     # got chance for error?
-    return [int(math.floor(feature[0]*1.0/2)), int(math.floor(feature[1]*1.0]/2))]
+    print("Downsampling Feature", feature)
+    output = [int(math.floor(feature[0]*1.0/2)), int(math.floor(feature[1]*1.0/2))]
+    print("Downsampled", output)
+    return output
 
 def up_sample_feature_coords(feature):
-    return [feature[0]*2, feature[1]*2]
+    print("Upsampling Feature", feature)
+    output = [feature[0]*2, feature[1]*2]
+    print("Upsampled", output)
+    return output
 
 # Pyramid
 def get_feature_coords_for_next_frame_iterative(prev_frame, next_frame, prev_features):
@@ -35,16 +41,21 @@ def get_feature_coords_for_next_frame_iterative(prev_frame, next_frame, prev_fea
     # Stores the prev_frames as they are downsampled
     prev_frames = [prev_frame]
     # Stores the next_frames as they are downsampled
-    next_frame = [next_frame]
+    next_frames = [next_frame]
     # Stores the features as they are downsampled
     features = [prev_features]
 
     # Downsample up the pyramid
-    while prev_frame_res_row > DOWN_RES_LIMIT:
+    i = 0
+    while frame_res_row > DOWN_RES_LIMIT:
         prev_frame_small = down_sample(prev_frame)
         next_frame_small = down_sample(next_frame)
-        prev_frame.append(prev_frame_small)
-        next_frame.append(next_frame_small)
+        cv2.imwrite('downsample/prev' + str(i) + '.jpg', prev_frame_small)
+        cv2.imwrite('downsample/next' + str(i) + '.jpg', next_frame_small)
+        print("Prev Frame size:", prev_frame_small.shape[0])
+        print("Next Frame size:", next_frame_small.shape[0])
+        prev_frames.append(prev_frame_small)
+        next_frames.append(next_frame_small)
 
         down_sampled_features = [down_sample_feature_coords(feature) for feature in prev_features]
         features.append(down_sampled_features)
@@ -53,28 +64,32 @@ def get_feature_coords_for_next_frame_iterative(prev_frame, next_frame, prev_fea
         prev_frame = prev_frame_small
         next_frame = next_frame_small
         prev_features = down_sampled_features
-        prev_frame_res_row = prev_frame_small.shape[0]
-
+        frame_res_row = prev_frame_small.shape[0]
+        i += 1
 
     ## LKTrack down the pyramid
+    upsampled_features_plus_delta = None
+    Z = None
 
     # First Iteration
     prev_frame = prev_frames[-1]
     next_frame = next_frames[-1]
     prev_features = features[-1]
-    features_plus_delta = LKTracker(prev_frame, next_frame, prev_features, prev_features)
+    features_plus_delta, Z = LKTracker(prev_frame, next_frame, prev_features, prev_features)
     upsampled_features_plus_delta = [up_sample_feature_coords(feature) for feature in features_plus_delta]
 
+    print("Num of prev_frames:", len(prev_frames))
     for i in range(len(prev_frames)-2,-1,-1):
+        print("----INDEX----", i)
         prev_frame = prev_frames[i]
         next_frame = next_frames[i]
         prev_features = features[i]
-        features_plus_delta = LKTracker(prev_frame, next_frame, prev_features, upsampled_features_plus_delta)
+        features_plus_delta, Z = LKTracker(prev_frame, next_frame, prev_features, upsampled_features_plus_delta)
         upsampled_features_plus_delta = [up_sample_feature_coords(feature) for feature in features_plus_delta]
 
-    return upsampled_features_plus_delta
+    return upsampled_features_plus_delta, Z
 
-def get_feature_coords_for_next_frame(prev_frame, next_frame, prev_features):
+def get_feature_coords_for_next_frame_recursive(prev_frame, next_frame, prev_features):
     prev_frame = prev_frame.astype('int16')
     next_frame = next_frame.astype('int16')
     frame_res_row = prev_frame.shape[0]
@@ -305,7 +320,13 @@ def test_LKTracker():
     cv2.imwrite('im1features.jpg', color_frame)
     # with open('features.pickle', 'wb') as output:
     #     pickle.dump(features, output, pickle.HIGHEST_PROTOCOL)
-    next_features,z = LKTracker(frame0, frame1, features, features)
+
+    # LKTracker Without Pyramid
+    # next_features,z = LKTracker(frame0, frame1, features, features)
+
+    # LKTracker With Pyramid
+    next_features,z = get_feature_coords_for_next_frame_iterative(frame0, frame1, features)
+
     print(next_features)
     print(z[0])
     color_frame = cv2.cvtColor(frame1, cv2.COLOR_GRAY2RGB)
