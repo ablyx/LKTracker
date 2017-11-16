@@ -61,6 +61,9 @@ def get_features(frame0):
     #     features = pickle.load(pkl)
     # return features
     features = []
+    # do gaussian blur first to remove noise that might affect the feature detection
+    frame0 = cv2.GaussianBlur(frame0,(13,13),0)
+    cv2.imwrite('blur.jpg', frame0)
     frame = frame0.astype('int16')
     rows, cols = frame.shape[:2]
 
@@ -135,8 +138,8 @@ def test_get_features():
     print(features)
     for y,x in features:
         cv2.circle(color_frame, (x, y), 13, (0, 0, 255), 1)
-    cv2.imwrite('FEATURES200shifted.jpg', color_frame)
-# test_get_features()
+    cv2.imwrite('getfeatures.jpg', color_frame)
+test_get_features()
 
 
 # frames are grayscale and of the same size
@@ -265,7 +268,7 @@ def test_LKTracker():
     cv2.imwrite('im2features.jpg', color_frame)
     # features = get_features(frame1)
     # print(features)
-test_LKTracker()
+# test_LKTracker()
 """
 # lets see if my code works
 # get the first 2 frames
