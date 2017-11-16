@@ -73,6 +73,8 @@ vortex_corner_pts = map(lambda p: np.array(p), vortex_corner_pts)
 p1, p2, p3, p4 = vortex_corner_pts
 # print(vortex_pts)
 vortex = cv2.imread('v2.jpg')
+# should i invert vortex
+vortex = (255-vortex)
 cv2.imshow('test2',vortex)
 print( ((p4 - p1)[1], (p4-p1)[0]))
 vortex = cv2.resize(vortex, (((p4-p1)[1]), (p4 - p1)[0])) # y,x

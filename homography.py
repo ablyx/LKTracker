@@ -208,7 +208,7 @@ def new_warp_subimage(image, subimage, board_pts):
     for r, row in enumerate(subimage):
         for c, pixel in enumerate(row):
             # for vortex, maybe I can skip the corners?
-            
+
             new_coord = warp((r,c),h)
             x, y, z = new_coord
             x = int(round(x))
@@ -223,6 +223,14 @@ def new_warp_subimage(image, subimage, board_pts):
                         image[(y+i,x+j)] = pixel
             except:
                 print('failed')
+    # i want to get rectangle from board pts to blur
+    # also, make the white/black at the corners transparent.
+    xcoords = map(lambda p:p[0], orig_pts)
+    ycoords = map(lambda p:p[1], orig_pts)
+    p1 = np.array((min(xcoords), min(ycoords)))
+    p2 = np.array((min(xcoords), max(ycoords)))
+    p3 = np.array((max(xcoords), min(ycoords)))
+    p4 = np.array((max(xcoords), max(ycoords)))
     return image
 
 
