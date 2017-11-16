@@ -2,6 +2,7 @@ import copy
 import cv2
 import numpy as np
 import pickle
+import math
 from scipy.signal import convolve2d
 from utils import *
 from sampling import down_sample
@@ -18,10 +19,60 @@ MAX_ITER = 10
 ## Given two images, track the features from one image to the next using LK Tracker and Pyramid
 def down_sample_feature_coords(feature):
     # got chance for error?
-    return [feature[0]/2, feature[1]/2]
+    return [int(math.floor(feature[0]*1.0/2)), int(math.floor(feature[1]*1.0]/2))]
 
 def up_sample_feature_coords(feature):
     return [feature[0]*2, feature[1]*2]
+
+# Pyramid
+def get_feature_coords_for_next_frame_iterative(prev_frame, next_frame, prev_features):
+    prev_frame = prev_frame.astype('int16')
+    next_frame = next_frame.astype('int16')
+    frame_res_row = prev_frame.shape[0]
+    frame_res_col = prev_frame.shape[1]
+    print("Frame res row: ", frame_res_row, "col: ", frame_res_col)
+
+    # Stores the prev_frames as they are downsampled
+    prev_frames = [prev_frame]
+    # Stores the next_frames as they are downsampled
+    next_frame = [next_frame]
+    # Stores the features as they are downsampled
+    features = [prev_features]
+
+    # Downsample up the pyramid
+    while prev_frame_res_row > DOWN_RES_LIMIT:
+        prev_frame_small = down_sample(prev_frame)
+        next_frame_small = down_sample(next_frame)
+        prev_frame.append(prev_frame_small)
+        next_frame.append(next_frame_small)
+
+        down_sampled_features = [down_sample_feature_coords(feature) for feature in prev_features]
+        features.append(down_sampled_features)
+
+        # Update vars
+        prev_frame = prev_frame_small
+        next_frame = next_frame_small
+        prev_features = down_sampled_features
+        prev_frame_res_row = prev_frame_small.shape[0]
+
+
+    ## LKTrack down the pyramid
+
+    # First Iteration
+    prev_frame = prev_frames[-1]
+    next_frame = next_frames[-1]
+    prev_features = features[-1]
+    features_plus_delta = LKTracker(prev_frame, next_frame, prev_features, prev_features)
+    upsampled_features_plus_delta = [up_sample_feature_coords(feature) for feature in features_plus_delta]
+
+    for i in range(len(prev_frames)-2,-1,-1):
+        prev_frame = prev_frames[i]
+        next_frame = next_frames[i]
+        prev_features = features[i]
+        features_plus_delta = LKTracker(prev_frame, next_frame, prev_features, upsampled_features_plus_delta)
+        upsampled_features_plus_delta = [up_sample_feature_coords(feature) for feature in features_plus_delta]
+
+    return upsampled_features_plus_delta
 
 def get_feature_coords_for_next_frame(prev_frame, next_frame, prev_features):
     prev_frame = prev_frame.astype('int16')
@@ -93,7 +144,7 @@ def get_features(frame0):
 
     # each pixel in the image has a corresponding window which gives matrix Z
     # getting the smallest eigenvalue of Z
-    
+
     print('get eig')
     wrows, wcols = Wyy.shape
     Zs = np.zeros((wrows, wcols, 2,2))
@@ -211,7 +262,7 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
             # print(next_y_start, next_y_end, next_x_start, next_x_end)
             next_feature_window = J[next_y_start: next_y_end, next_x_start: next_x_end]
             # # skip the boundary cases
-            if prev_feature_window.shape != (WINDOW,WINDOW) or next_feature_window.shape != (WINDOW,WINDOW): 
+            if prev_feature_window.shape != (WINDOW,WINDOW) or next_feature_window.shape != (WINDOW,WINDOW):
                 result_features.append((next_y+0, next_x+0))
                 continue
             ## w(I-J)
@@ -242,7 +293,7 @@ def get_frame_window(y, x, rows, cols):
 def test_LKTracker():
     frame0 = cv2.imread('test/t1.jpeg', 0)
     frame1 = cv2.imread('test/t4.jpeg', 0)
-    
+
     # with open('features.pickle', 'rb') as pkl:
     #     features = pickle.load(pkl)
     features, z = get_features(frame0)
