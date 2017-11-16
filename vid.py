@@ -48,39 +48,44 @@ old_gray = cv2.cvtColor(old_frame, cv2.COLOR_BGR2GRAY)
 p0 = cv2.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
 print('p0', p0)
 # rectangle
+# in the form x,y
 orig_pts = [(286,129),(282,329),(535,135),(529,329)]
 orig_pts = map(lambda x:np.array(x), orig_pts)
 p0 = np.array(map(lambda p: np.array(p), orig_pts))
 p0 = p0.astype('float32')
 # p0 = np.array(orig_pts)
 
-xcoords = map(lambda p:p[1], orig_pts)
-ycoords = map(lambda p:p[0], orig_pts)
-p1 = np.array((min(ycoords), min(xcoords)))
-p2 = np.array((min(ycoords), max(xcoords)))
-p3 = np.array((max(ycoords), min(xcoords)))
-p4 = np.array((max(ycoords), max(xcoords)))
+xcoords = map(lambda p:p[0], orig_pts)
+ycoords = map(lambda p:p[1], orig_pts)
+p1 = np.array((min(xcoords), min(ycoords)))
+p2 = np.array((min(xcoords), max(ycoords)))
+p3 = np.array((max(xcoords), min(ycoords)))
+p4 = np.array((max(xcoords), max(ycoords)))
 
 # this is a rectangle based on the pts from first image
 vortex_pts = [p1, p2, p3, p4]
 print('orig_pts', orig_pts)
 print('vortex_pts', vortex_pts)
+rows = (p4-p1)[0]
+cols = (p4-p1)[1]
+vortex_corner_pts = [(0, 0), (cols, 0), (cols, rows), (0, rows)]
+
 # print(vortex_pts)
 vortex = cv2.imread('test2.jpg')
 # print( ((p4 - p1)[1], (p4-p1)[0]))
 vortex = cv2.resize(vortex, (((p4-p1)[0]), (p4 - p1)[1])) # y,x
 firstFrame = old_frame
 firstFrameVortex = warp_subimage(firstFrame, vortex, vortex_pts, orig_pts)
-cv2.namedWindow("vortex", cv2.WINDOW_NORMAL)
+# cv2.namedWindow("vortex", cv2.WINDOW_NORMAL)
 img_arr = [firstFrameVortex,]
-cv2.imshow('vortex',firstFrameVortex)
-cv2.waitKey(0)
+# cv2.imshow('vortex',firstFrameVortex)
+# cv2.waitKey(0)
 
 # Create a mask image for drawing purposes
 mask = np.zeros_like(old_frame)
 counter = 1
 
-while(counter<30):
+while(counter<300):
     ret,frame = cap.read()
     if frame is None:
         break
@@ -119,5 +124,5 @@ while(counter<30):
     print(counter)
 
 # cv2.destroyAllWindows()
-write_img_array_to_video(img_arr, fps, 'homo_short_new.avi')
+write_img_array_to_video(img_arr, fps, 'homo_long_anchor.avi')
 # cap.release()

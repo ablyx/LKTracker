@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-
+# u is x v is y
 img = cv2.imread('test/bottle1.jpg')
 to_warp = cv2.imread('test/nobottle.jpg')
 cv2.namedWindow("img", cv2.WINDOW_NORMAL)
@@ -131,8 +131,20 @@ def warp_subimage(image, subimage, orig_pts, to_warp_pts):
         sm = small_mat(u, v, ut, vt)
         bm = np.vstack((bm,sm))
     h = homo_mat(bm)
+
+    rows, cols, s = subimage.shape
+    # test if h works
+    op = [[0,0], [0, cols-1], [rows-1, 0], [rows-1, cols-1]]
+    for i, pt in enumerate(pts):
+        u, v, ut, vt = pt
+        r, c = op[i]
+        print('ut vt:', ut, vt)
+        print('ut vt:', warp((u, v), h))
+        print('r c:' , (r,c))
+        print('hr hc:', warp((r,c), h))
+
     # print(h)
-    r, c, s = subimage.shape
+    
     for r, row in enumerate(subimage):
         for c, pixel in enumerate(row):
             new_coord = warp((c,r),h)
@@ -142,12 +154,19 @@ def warp_subimage(image, subimage, orig_pts, to_warp_pts):
             if (r,c) == (0,0):
                 top_left_x, top_left_y = to_warp_pts[0]
                 offset = [top_left_x-x, top_left_y - y]
+                print('offset', offset)
                 # print('topleftwarp',(y+int(offset[0]), x+int(offset[1])))
                 # print(to_warp_pts[0])
             # image_warped_coord = (x+int(offset[1]), y+int(offset[0]))
             image_warped_coord = (y+int(offset[1]), x+int(offset[0]))
             if (r,c) == (0,0):
-                print('image_warped_coord', image_warped_coord)
+                print('image_warped_coord 0 0', image_warped_coord, (y,x))
+            if (r,c) == (rows-1,0):
+                print('image_warped_coord rows 0', image_warped_coord, (y,x))
+            if (r,c) == (0,cols-1):
+                print('image_warped_coord 0 cols', image_warped_coord, (y,x))
+            if (r,c) == (rows-1,cols-1):
+                print('image_warped_coord rows cols', image_warped_coord, (y,x))
             
             try:
                 image[image_warped_coord] = pixel
@@ -220,6 +239,8 @@ def cvhomo(img, pts):
     h, status = cv2.findHomography(src, dst)
     warped_img = cv2.warpPerspective(img, h, (img.shape[1], img.shape[0]))
     return warped_img
+
+    
 if __name__ == "main":
     test(pts, img, to_warp)
     # warped_img = warp_img(img, pts)
