@@ -104,6 +104,32 @@ def homo_mat(mat):
     h = (1/V[-1,-1])*V[:,-1]
     return np.reshape(h, (3,3))
 
+# orig pts are saved from the first frame
+# to_warp_pts are the tracked points
+def warp_subimage(image, subimage, orig_pts, to_warp_pts):
+    #calculate offet from to left corner of subimage
+    subimage_offset = (0, 0)
+    u, v, ut, vt = pts[0]
+    bm = small_mat(u, v, ut, vt)
+    for pt in pts[1:]:
+        u, v, ut, vt = pt
+        sm = small_mat(u, v, ut, vt)
+        bm = np.vstack((bm,sm))
+    h = homo_mat(bm)
+    r, c, s = subimage.shape
+    for r, row in enumerate(subimage):
+        for c, pixel in enumerate(row):
+            new_coord = warp((c,r),h)
+            x, y, z = new_coord
+            x = int(round(x))
+            y = int(round(y))
+            image_warped_coord = (y+offset[0], x+offset[1])
+            try:
+                image[orig_new_coord] = pixel
+            except:
+                pass
+    return image
+
 
 def warp_img(img, pts):
     u, v, ut, vt = pts[0]

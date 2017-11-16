@@ -9,12 +9,12 @@ from sampling import down_sample
 
 # cv2.cv.CV_CAP_PROP_FPS
 CV_CAP_PROP_FPS = 5
-NUM_FEATURES = 5
+NUM_FEATURES = 50
 DOWN_RES_LIMIT = 64
 WINDOW = 13
 WW = int(round(WINDOW/2))
 THRESHOLD = 0.05
-MAX_ITER = 10
+MAX_ITER = 1
 
 ## Given two images, track the features from one image to the next using LK Tracker and Pyramid
 def down_sample_feature_coords(feature):
@@ -196,13 +196,16 @@ def get_features(frame0):
 
 def test_get_features():
     frame = cv2.imread('test2.jpg', 0)
+    # do gaussian blur first to remove noise that might affect the feature detection
+    frame = cv2.GaussianBlur(frame,(5,5),0)
+    cv2.imwrite('blur.jpg', frame)
     features, gdZs = get_features(frame)
     color_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
     print(features)
     for y,x in features:
         cv2.circle(color_frame, (x, y), 13, (0, 0, 255), 1)
-    cv2.imwrite('FEATURES200shifted.jpg', color_frame)
-# test_get_features()
+    cv2.imwrite('getfeatures.jpg', color_frame)
+test_get_features()
 
 
 # frames are grayscale and of the same size
@@ -314,10 +317,8 @@ def test_LKTracker():
     features, z = get_features(frame0)
     print(features)
     print(z[0])
-    color_frame = cv2.cvtColor(frame0, cv2.COLOR_GRAY2RGB)
-    for y,x in features:
-        cv2.circle(color_frame, (x, y), 13, (0, 0, 255), 1)
-    cv2.imwrite('im1features.jpg', color_frame)
+    color_frame0 = cv2.cvtColor(frame0, cv2.COLOR_GRAY2RGB)
+
     # with open('features.pickle', 'wb') as output:
     #     pickle.dump(features, output, pickle.HIGHEST_PROTOCOL)
 
@@ -329,12 +330,18 @@ def test_LKTracker():
 
     print(next_features)
     print(z[0])
-    color_frame = cv2.cvtColor(frame1, cv2.COLOR_GRAY2RGB)
+    color_frame1 = cv2.cvtColor(frame1, cv2.COLOR_GRAY2RGB)
+
+    for y,x in features:
+        cv2.circle(color_frame0, (x, y), 13, (255, 0, 0), 1)
+        cv2.circle(color_frame1, (x, y), 13, (255, 0, 0), 1)
+    cv2.imwrite('im1features.jpg', color_frame0)
+
     for i ,(y,x) in enumerate(next_features):
-        cv2.circle(color_frame, (x, y), 13, (0, 0, 255), 1)
+        cv2.circle(color_frame1, (x, y), 13, (0, 0, 255), 1)
         old_y, old_x = features[i]
-        cv2.line(color_frame, (x, y), (old_x, old_y), (0,255,0), 2)
-    cv2.imwrite('im2features.jpg', color_frame)
+        cv2.line(color_frame1, (x, y), (old_x, old_y), (0,255,0), 2)
+    cv2.imwrite('im2features.jpg', color_frame1)
     # features = get_features(frame1)
     # print(features)
 test_LKTracker()
