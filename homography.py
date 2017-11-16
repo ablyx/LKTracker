@@ -110,7 +110,7 @@ def warp_subimage(image, subimage, orig_pts, to_warp_pts):
     #calculate offet from to left corner of subimage
     print('op0', orig_pts[0])
     # offset = orig_pts[0] # this is in the form x, y
-    print('offset',offset)
+    # print('offset',offset)
     # orig_pts is of form [(u0,v0), p1, ...]
     # pts is of form [(u1, v1, u1t, v1t), (u2, v2, u2t, v2t), ...]
     pts = []
@@ -140,8 +140,8 @@ def warp_subimage(image, subimage, orig_pts, to_warp_pts):
             x = int(round(x))
             y = int(round(y))
             if (r,c) == (0,0):
-                top_left_y, top_left_x = to_warp_pts[0]
-                # offset = [top_left_x-x, top_left_y - y]
+                top_left_x, top_left_y = to_warp_pts[0]
+                offset = [top_left_x-x, top_left_y - y]
                 # print('topleftwarp',(y+int(offset[0]), x+int(offset[1])))
                 # print(to_warp_pts[0])
             # image_warped_coord = (x+int(offset[1]), y+int(offset[0]))

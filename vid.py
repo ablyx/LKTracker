@@ -73,6 +73,8 @@ firstFrame = old_frame
 firstFrameVortex = warp_subimage(firstFrame, vortex, vortex_pts, orig_pts)
 cv2.namedWindow("vortex", cv2.WINDOW_NORMAL)
 img_arr = [firstFrameVortex,]
+cv2.imshow('vortex',firstFrameVortex)
+cv2.waitKey(0)
 
 # Create a mask image for drawing purposes
 mask = np.zeros_like(old_frame)
