@@ -285,6 +285,8 @@ def LKTracker(frame, next_frame, frame_features, next_frame_features):
                 print(d)
                 d = Z_inv * b
                 print(d)
+                d = np.matmul(Z_inv, b)
+                print(d)
                 dx, dy = d
                 ny, nx = ny+dy, nx+dx
                 next_y, next_x = int(round(ny)), int(round(nx))

@@ -108,14 +108,30 @@ def homo_mat(mat):
 # to_warp_pts are the tracked points
 def warp_subimage(image, subimage, orig_pts, to_warp_pts):
     #calculate offet from to left corner of subimage
-    subimage_offset = (0, 0)
+    print('op0', orig_pts[0])
+    # offset = orig_pts[0] # this is in the form x, y
+    print('offset',offset)
+    # orig_pts is of form [(u0,v0), p1, ...]
+    # pts is of form [(u1, v1, u1t, v1t), (u2, v2, u2t, v2t), ...]
+    pts = []
+    # print('to_warp_pts', to_warp_pts)
+    # print('to_warp_pts', list(map(lambda p:list(p), to_warp_pts)))
+    
+    for i, op in enumerate(orig_pts):
+        u, v = op
+        # print('i', to_warp_pts[i])
+        ut, vt = to_warp_pts[i]
+        pts.append((u, v, ut, vt))
+
     u, v, ut, vt = pts[0]
+    # print(u, v, ut, vt)
     bm = small_mat(u, v, ut, vt)
     for pt in pts[1:]:
         u, v, ut, vt = pt
         sm = small_mat(u, v, ut, vt)
         bm = np.vstack((bm,sm))
     h = homo_mat(bm)
+    # print(h)
     r, c, s = subimage.shape
     for r, row in enumerate(subimage):
         for c, pixel in enumerate(row):
@@ -123,10 +139,20 @@ def warp_subimage(image, subimage, orig_pts, to_warp_pts):
             x, y, z = new_coord
             x = int(round(x))
             y = int(round(y))
-            image_warped_coord = (y+offset[0], x+offset[1])
+            if (r,c) == (0,0):
+                top_left_y, top_left_x = to_warp_pts[0]
+                # offset = [top_left_x-x, top_left_y - y]
+                # print('topleftwarp',(y+int(offset[0]), x+int(offset[1])))
+                # print(to_warp_pts[0])
+            # image_warped_coord = (x+int(offset[1]), y+int(offset[0]))
+            image_warped_coord = (y+int(offset[1]), x+int(offset[0]))
+            if (r,c) == (0,0):
+                print('image_warped_coord', image_warped_coord)
+            
             try:
-                image[orig_new_coord] = pixel
+                image[image_warped_coord] = pixel
             except:
+                # print('fail')
                 pass
     return image
 
@@ -194,12 +220,12 @@ def cvhomo(img, pts):
     h, status = cv2.findHomography(src, dst)
     warped_img = cv2.warpPerspective(img, h, (img.shape[1], img.shape[0]))
     return warped_img
-
-test(pts, img, to_warp)
-# warped_img = warp_img(img, pts)
-warped_img = cvhomo(img, pts)
-print('done')
-cv2.namedWindow("warped_img", cv2.WINDOW_NORMAL)
-cv2.imshow('warped_img', warped_img)
-cv2.imwrite('cvwarped_img_bottletonobottle.jpg', warped_img)
-cv2.waitKey(0)
+if __name__ == "main":
+    test(pts, img, to_warp)
+    # warped_img = warp_img(img, pts)
+    warped_img = cvhomo(img, pts)
+    print('done')
+    cv2.namedWindow("warped_img", cv2.WINDOW_NORMAL)
+    cv2.imshow('warped_img', warped_img)
+    cv2.imwrite('cvwarped_img_bottletonobottle.jpg', warped_img)
+    cv2.waitKey(0)
