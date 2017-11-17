@@ -74,7 +74,7 @@ p1, p2, p3, p4 = vortex_corner_pts
 # print(vortex_pts)
 vortex = cv2.imread('v2.jpg')
 # should i invert vortex
-vortex = (255-vortex)
+# vortex = (255-vortex)
 cv2.imshow('test2',vortex)
 print( ((p4 - p1)[1], (p4-p1)[0]))
 vortex = cv2.resize(vortex, (((p4-p1)[1]), (p4 - p1)[0])) # y,x
@@ -114,9 +114,6 @@ while(counter<300):
         # mask = cv2.line(mask, (a,b),(c,d), color[i].tolist(), 2)
         # frame = cv2.circle(frame,(a,b),5,color[i].tolist(),-1)
     img = cv2.add(frame,mask)
-    top_left = (int(good_new[0][0]), int(good_new[0][1]))
-    print('topleft', top_left)
-    frameVortex = cv2.circle(frameVortex,top_left,3,(0,0,255),-1)
     cv2.imshow('vortex',frameVortex)
     # cv2.imshow('frame',img)
     k = cv2.waitKey(30) & 0xff

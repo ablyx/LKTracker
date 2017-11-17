@@ -203,12 +203,17 @@ def new_warp_subimage(image, subimage, board_pts):
         bm = np.vstack((bm,sm))
     h = homo_mat(bm)
 
-
+    DIST_THRESHOLD = 300
     # print(h)
     for r, row in enumerate(subimage):
         for c, pixel in enumerate(row):
-            # for vortex, maybe I can skip the corners?
-
+            # for vortex, make corners transparent
+            if r < rows/4 or r > 3*rows/4 or c < cols/4 or c > 3*cols/4:
+                dist = sum(list(pixel))
+                if dist < DIST_THRESHOLD:
+                    continue
+            # if list(pixel) == [0,0,0] or list(pixel) == [255,255,255]:
+            #     continue
             new_coord = warp((r,c),h)
             x, y, z = new_coord
             x = int(round(x))
@@ -224,9 +229,8 @@ def new_warp_subimage(image, subimage, board_pts):
             except:
                 print('failed')
     # i want to get rectangle from board pts to blur
-    # also, make the white/black at the corners transparent.
-    xcoords = map(lambda p:p[0], orig_pts)
-    ycoords = map(lambda p:p[1], orig_pts)
+    xcoords = map(lambda p:p[0], board_pts)
+    ycoords = map(lambda p:p[1], board_pts)
     p1 = np.array((min(xcoords), min(ycoords)))
     p2 = np.array((min(xcoords), max(ycoords)))
     p3 = np.array((max(xcoords), min(ycoords)))
