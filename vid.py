@@ -72,7 +72,11 @@ vortex_corner_pts = [(0, 0), (0, rows-1), (cols-1, 0), (cols-1, rows-1)]
 vortex_corner_pts = map(lambda p: np.array(p), vortex_corner_pts)
 p1, p2, p3, p4 = vortex_corner_pts
 # print(vortex_pts)
-vortex = cv2.imread('v2.jpg')
+vortexes = []
+for i in range(1,13):
+    vortex = cv2.imread('vortex/v{}.tiff'.format(i))
+    vortex = cv2.resize(vortex, (((p4-p1)[1]), (p4 - p1)[0]))
+    vortexes.append(vortex)
 # should i invert vortex
 # vortex = (255-vortex)
 cv2.imshow('test2',vortex)
@@ -80,7 +84,7 @@ print( ((p4 - p1)[1], (p4-p1)[0]))
 vortex = cv2.resize(vortex, (((p4-p1)[1]), (p4 - p1)[0])) # y,x
 cv2.imshow('test2',vortex)
 firstFrame = old_frame
-firstFrameVortex = new_warp_subimage(firstFrame, vortex, orig_pts)
+firstFrameVortex = new_warp_subimage(firstFrame, vortexes[-1], orig_pts)
 cv2.namedWindow("vortex", cv2.WINDOW_NORMAL)
 img_arr = [firstFrameVortex,]
 cv2.imshow('vortex',firstFrameVortex)
@@ -90,7 +94,7 @@ cv2.waitKey(0)
 mask = np.zeros_like(old_frame)
 counter = 1
 
-while(counter<300):
+while(True):
     ret,frame = cap.read()
     if frame is None:
         break
@@ -105,6 +109,8 @@ while(counter<300):
     # print('gn', good_new[0])
     # print('good new', list(map(lambda p:list(p), good_new[0])))
     # draw the tracks
+    v = counter % 12
+    vortex = vortexes[v]
     frameVortex = new_warp_subimage(frame, vortex, good_new)
     img_arr.append(frameVortex)
     # for i,(new,old) in enumerate(zip(good_new,good_old)):
@@ -126,6 +132,6 @@ while(counter<300):
     print(counter)
 
 # cv2.destroyAllWindows()
-write_img_array_to_video(img_arr, fps, 'gg.avi')
+write_img_array_to_video(img_arr, fps, 'VORTEX.avi')
 # cap.release()
 

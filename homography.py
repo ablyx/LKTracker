@@ -232,8 +232,6 @@ def new_warp_subimage(image, subimage, board_pts):
     # i want to get rectangle from board pts to blur
     # do median blur on 4 corners to remove purple dot first
     # do it repeatedly because dot is too big
-    # then blur the rest
-    # i think only blur the sides? centre no need blur
     xcoords = map(lambda p:p[0], board_pts)
     ycoords = map(lambda p:p[1], board_pts)
     p1 = (min(xcoords), min(ycoords))
@@ -241,8 +239,8 @@ def new_warp_subimage(image, subimage, board_pts):
     p3 = (max(xcoords), min(ycoords))
     p4 = (max(xcoords), max(ycoords))
     corners = [p1,p2,p3,p4]
-    CORNER_BLUR_WINDOW = 33
-    CONV_WINDOW = 15
+    CORNER_BLUR_WINDOW = 33*2
+    CONV_WINDOW = 15*2
     WW = CONV_WINDOW/2
     MEDIAN_ITER = 3
     dots = copy.deepcopy(image)
@@ -251,8 +249,8 @@ def new_warp_subimage(image, subimage, board_pts):
             x,y = corner
             x = int(x)
             y = int(y)
-            for i in range(y-CORNER_BLUR_WINDOW/2, y+CORNER_BLUR_WINDOW/2):
-                for j in range(x-CORNER_BLUR_WINDOW/2, x+CORNER_BLUR_WINDOW/2):
+            for i in range(y-CORNER_BLUR_WINDOW/2, y+CORNER_BLUR_WINDOW/2): # y
+                for j in range(x-CORNER_BLUR_WINDOW/2, x+CORNER_BLUR_WINDOW/2): # x
                     # in case out of bounds
                     try:             
                         window = dots[i-WW:i+WW+1, j-WW:j+WW+1]
@@ -262,6 +260,22 @@ def new_warp_subimage(image, subimage, board_pts):
                         print('error')
                         continue
         dots = copy.deepcopy(image)
+
+    # blur vortex
+    box = copy.deepcopy(image)
+    AVERAGE_BLUR_WINDOW = 5
+    WW = AVERAGE_BLUR_WINDOW/2
+    for i in range(int(p1[1]), int(p2[1])): # y
+        for j in range(int(p1[0]), int(p3[0])): # x
+            try:
+                avg = np.average(box[i-WW:i+WW+1, j-WW:j+WW+1])
+                # print(avg)
+                image[i, j] = int(avg)
+                # print('ij', i, j, int(avg))
+            except:
+                print('ij', i, j)
+                continue
+
     return image
 
 
