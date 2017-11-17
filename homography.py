@@ -1,6 +1,7 @@
 import cv2
+import copy
 import numpy as np
-
+import scipy.signal
 # u is x v is y
 img = cv2.imread('test/bottle1.jpg')
 to_warp = cv2.imread('test/nobottle.jpg')
@@ -229,12 +230,38 @@ def new_warp_subimage(image, subimage, board_pts):
             except:
                 print('failed')
     # i want to get rectangle from board pts to blur
+    # do median blur on 4 corners to remove purple dot first
+    # do it repeatedly because dot is too big
+    # then blur the rest
+    # i think only blur the sides? centre no need blur
     xcoords = map(lambda p:p[0], board_pts)
     ycoords = map(lambda p:p[1], board_pts)
-    p1 = np.array((min(xcoords), min(ycoords)))
-    p2 = np.array((min(xcoords), max(ycoords)))
-    p3 = np.array((max(xcoords), min(ycoords)))
-    p4 = np.array((max(xcoords), max(ycoords)))
+    p1 = (min(xcoords), min(ycoords))
+    p2 = (min(xcoords), max(ycoords))
+    p3 = (max(xcoords), min(ycoords))
+    p4 = (max(xcoords), max(ycoords))
+    corners = [p1,p2,p3,p4]
+    CORNER_BLUR_WINDOW = 33
+    CONV_WINDOW = 15
+    WW = CONV_WINDOW/2
+    MEDIAN_ITER = 3
+    dots = copy.deepcopy(image)
+    for _ in range(MEDIAN_ITER):
+        for corner in corners:
+            x,y = corner
+            x = int(x)
+            y = int(y)
+            for i in range(y-CORNER_BLUR_WINDOW/2, y+CORNER_BLUR_WINDOW/2):
+                for j in range(x-CORNER_BLUR_WINDOW/2, x+CORNER_BLUR_WINDOW/2):
+                    # in case out of bounds
+                    try:             
+                        window = dots[i-WW:i+WW+1, j-WW:j+WW+1]
+                        # print(window)
+                        image[i,j] = np.median(window)
+                    except:
+                        print('error')
+                        continue
+        dots = copy.deepcopy(image)
     return image
 
 
