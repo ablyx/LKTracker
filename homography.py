@@ -3,12 +3,6 @@ import copy
 import numpy as np
 import scipy.signal
 # u is x v is y
-img = cv2.imread('test/bottle1.jpg')
-to_warp = cv2.imread('test/nobottle.jpg')
-cv2.namedWindow("img", cv2.WINDOW_NORMAL)
-cv2.namedWindow("to_warp", cv2.WINDOW_NORMAL)
-cv2.imshow('img', img)
-cv2.imshow('to_warp', to_warp)
 
 # bottle points
 # bottle1 to nobottle
@@ -104,78 +98,8 @@ def homo_mat(mat):
     V = np.transpose(V)
     h = (1/V[-1,-1])*V[:,-1]
     return np.reshape(h, (3,3))
-"""
-# orig pts are saved from the first frame
-# to_warp_pts are the tracked points
-def warp_subimage(image, subimage, orig_pts, to_warp_pts):
-    #calculate offet from to left corner of subimage
-    print('op0', orig_pts[0])
-    # offset = orig_pts[0] # this is in the form x, y
-    # print('offset',offset)
-    # orig_pts is of form [(u0,v0), p1, ...]
-    # pts is of form [(u1, v1, u1t, v1t), (u2, v2, u2t, v2t), ...]
-    pts = []
-    # print('to_warp_pts', to_warp_pts)
-    # print('to_warp_pts', list(map(lambda p:list(p), to_warp_pts)))
-    
-    for i, op in enumerate(orig_pts):
-        u, v = op
-        # print('i', to_warp_pts[i])
-        ut, vt = to_warp_pts[i]
-        pts.append((u, v, ut, vt))
 
-    u, v, ut, vt = pts[0]
-    # print(u, v, ut, vt)
-    bm = small_mat(u, v, ut, vt)
-    for pt in pts[1:]:
-        u, v, ut, vt = pt
-        sm = small_mat(u, v, ut, vt)
-        bm = np.vstack((bm,sm))
-    h = homo_mat(bm)
-
-    rows, cols, s = subimage.shape
-    # test if h works
-    op = orig_pts
-    for i, pt in enumerate(pts):
-        u, v, ut, vt = pt
-        r, c = op[i]
-        print('ut vt:', ut, vt)
-        print('ut vt:', warp((u, v), h))
-        print('r c:' , (r,c))
-        print('hr hc:', warp((r,c), h))
-
-    # print(h)
-    
-    for r, row in enumerate(subimage):
-        for c, pixel in enumerate(row):
-            new_coord = warp((c,r),h)
-            x, y, z = new_coord
-            x = int(round(x))
-            y = int(round(y))
-            if (r,c) == (0,0):
-                top_left_x, top_left_y = to_warp_pts[0]
-                offset = [top_left_x-x, top_left_y - y]
-                print('offset', offset)
-                # print('topleftwarp',(y+int(offset[0]), x+int(offset[1])))
-                # print(to_warp_pts[0])
-            # image_warped_coord = (x+int(offset[1]), y+int(offset[0]))
-            image_warped_coord = (y+int(offset[1]), x+int(offset[0]))
-            if (r,c) == (0,0):
-                print('image_warped_coord 0 0', image_warped_coord, (y,x))
-            if (r,c) == (rows-1,0):
-                print('image_warped_coord rows 0', image_warped_coord, (y,x))
-            if (r,c) == (0,cols-1):
-                print('image_warped_coord 0 cols', image_warped_coord, (y,x))
-            if (r,c) == (rows-1,cols-1):
-                print('image_warped_coord rows cols', image_warped_coord, (y,x))
-            
-            try:
-                image[image_warped_coord] = pixel
-            except:
-                # print('fail')
-                pass
-    return image
-"""
+# board pts is in the form x,y
 def new_warp_subimage(image, subimage, board_pts):
     # warping vortex to board
     #calculate offet from to left corner of subimage
@@ -188,10 +112,9 @@ def new_warp_subimage(image, subimage, board_pts):
     # print('to_warp_pts', to_warp_pts)
     # print('to_warp_pts', list(map(lambda p:list(p), to_warp_pts)))
     rows, cols, s = subimage.shape
-    vortex_pts = [(0,0), (rows-1, 0), (0, cols-1), (rows-1, cols-1)] # in the form of x,y 
+    vortex_pts = [(0,0), (cols-1, 0), (0, rows-1), (cols-1, rows-1)] # in the form of x,y
     for i, vp in enumerate(vortex_pts):
         u, v = vp
-        # print('i', to_warp_pts[i])
         ut, vt = board_pts[i]
         pts.append((u, v, ut, vt))
 
@@ -203,11 +126,12 @@ def new_warp_subimage(image, subimage, board_pts):
         sm = small_mat(u, v, ut, vt)
         bm = np.vstack((bm,sm))
     h = homo_mat(bm)
+    h_inv = np.linalg.inv(h)
 
     DIST_THRESHOLD = 300
     # print(h)
-    for r, row in enumerate(subimage):
-        for c, pixel in enumerate(row):
+    for r, row in enumerate(subimage): # y
+        for c, pixel in enumerate(row): # x
             # for vortex, make corners transparent
             if r < rows/4 or r > 3*rows/4 or c < cols/4 or c > 3*cols/4:
                 dist = sum(list(pixel))
@@ -215,7 +139,8 @@ def new_warp_subimage(image, subimage, board_pts):
                     continue
             # if list(pixel) == [0,0,0] or list(pixel) == [255,255,255]:
             #     continue
-            new_coord = warp((r,c),h)
+            # warp x,y
+            new_coord = warp((c,r),h)
             x, y, z = new_coord
             x = int(round(x))
             y = int(round(y))
@@ -228,24 +153,27 @@ def new_warp_subimage(image, subimage, board_pts):
                         # print('test', y, x)
                         image[(y+i,x+j)] = pixel
             except:
-                print('failed')
+                # print('failed')
+                pass
     # i want to get rectangle from board pts to blur
     # do median blur on 4 corners to remove purple dot first
     # do it repeatedly because dot is too big
     xcoords = map(lambda p:p[0], board_pts)
     ycoords = map(lambda p:p[1], board_pts)
     p1 = (min(xcoords), min(ycoords))
-    p2 = (min(xcoords), max(ycoords))
-    p3 = (max(xcoords), min(ycoords))
+    p2 = (max(xcoords), min(ycoords))
+    p3 = (min(xcoords), max(ycoords))
     p4 = (max(xcoords), max(ycoords))
     corners = [p1,p2,p3,p4]
-    CORNER_BLUR_WINDOW = 33*2
-    CONV_WINDOW = 15*2
+
+    # tweak this numbers maybe.
+    CORNER_BLUR_WINDOW = 37
+    CONV_WINDOW = 21
     WW = CONV_WINDOW/2
     MEDIAN_ITER = 3
     dots = copy.deepcopy(image)
     for _ in range(MEDIAN_ITER):
-        for corner in corners:
+        for corner in board_pts:
             x,y = corner
             x = int(x)
             y = int(y)
@@ -254,28 +182,75 @@ def new_warp_subimage(image, subimage, board_pts):
                     # in case out of bounds
                     try:             
                         window = dots[i-WW:i+WW+1, j-WW:j+WW+1]
-                        # print(window)
-                        image[i,j] = np.median(window)
+                        # print(np.average(window))
+                        image[i,j] = int(np.median(window))
                     except:
-                        print('error')
+                        # print('error')
                         continue
         dots = copy.deepcopy(image)
-
-    # blur vortex
+    print('dots removed')
+    """
+    # blur everything
     box = copy.deepcopy(image)
-    AVERAGE_BLUR_WINDOW = 5
+    AVERAGE_BLUR_WINDOW = 3
     WW = AVERAGE_BLUR_WINDOW/2
-    for i in range(int(p1[1]), int(p2[1])): # y
-        for j in range(int(p1[0]), int(p3[0])): # x
+    # print('yrange', (int(p1[1]), int(p3[1])))
+    # print('yrange', (int(p1[0]), int(p2[0])))
+    for i in range(int(p1[1]), int(p3[1])): # y
+        for j in range(int(p1[0]), int(p2[0])): # x
             try:
                 avg = np.average(box[i-WW:i+WW+1, j-WW:j+WW+1])
                 # print(avg)
                 image[i, j] = int(avg)
                 # print('ij', i, j, int(avg))
             except:
-                print('ij', i, j)
+                # print('ij', i, j)
+                print('error')
                 continue
+    """
+    # blur vortex, dont blur corners
+    box = copy.deepcopy(image)
+    AVERAGE_BLUR_WINDOW = 5
+    WW = AVERAGE_BLUR_WINDOW/2
+    for r, row in enumerate(subimage): # y
+        for c, pixel in enumerate(row): # x
+            # for vortex, make corners transparent
+            if r < rows/4 or r > 3*rows/4 or c < cols/4 or c > 3*cols/4:
+                dist = sum(list(pixel))
+                if dist < DIST_THRESHOLD:
+                    continue
+                else:
+                    new_coord = warp((c,r),h)
+                    x, y, z = new_coord
+                    x = int(round(x))
+                    y = int(round(y))
+                    try:
+                        # rounding error might cause some pixels not to show
+                        for i in range(-2,3):
+                            for j in range(-2,3):
+                                ny = y+i
+                                nx = x+j
+                                avg = np.average(box[ny-WW:ny+WW+1, nx-WW:nx+WW+1])
+                                image[(ny,nx)] = int(avg)
+                    except:
+                        pass
 
+            new_coord = warp((c,r),h)
+            x, y, z = new_coord
+            x = int(round(x))
+            y = int(round(y))
+            try:
+                # rounding error might cause some pixels not to show
+                for i in range(2):
+                    for j in range(2):
+                        ny = y+i
+                        nx = x+j
+                        avg = np.average(box[ny-WW:ny+WW+1, nx-WW:nx+WW+1])
+                        image[(ny,nx)] = int(avg)
+            except:
+                # print('failed')
+                continue
+    print('blurred')
     return image
 
 

@@ -48,9 +48,10 @@ old_gray = cv2.cvtColor(old_frame, cv2.COLOR_BGR2GRAY)
 p0 = cv2.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
 print('p0', p0)
 # rectangle
-# in the form x,y
+# in the form x, y
 orig_pts = [(286,129),(282,329),(535,135),(529,329)]
-orig_pts = map(lambda x:np.array(x), orig_pts)
+# in the form x, y
+# orig_pts = [(129,286),(329,282),(135,535),(329,529)]
 p0 = np.array(map(lambda p: np.array(p), orig_pts))
 p0 = p0.astype('float32')
 # p0 = np.array(orig_pts)
@@ -79,16 +80,14 @@ for i in range(1,13):
     vortexes.append(vortex)
 # should i invert vortex
 # vortex = (255-vortex)
-cv2.imshow('test2',vortex)
+# cv2.imshow('test2',vortex)
 print( ((p4 - p1)[1], (p4-p1)[0]))
 vortex = cv2.resize(vortex, (((p4-p1)[1]), (p4 - p1)[0])) # y,x
-cv2.imshow('test2',vortex)
 firstFrame = old_frame
 firstFrameVortex = new_warp_subimage(firstFrame, vortexes[-1], orig_pts)
-cv2.namedWindow("vortex", cv2.WINDOW_NORMAL)
+# cv2.namedWindow("vortex", cv2.WINDOW_NORMAL)
 img_arr = [firstFrameVortex,]
-cv2.imshow('vortex',firstFrameVortex)
-cv2.waitKey(0)
+# cv2.imshow('vortex',firstFrameVortex)
 
 # Create a mask image for drawing purposes
 mask = np.zeros_like(old_frame)
@@ -102,8 +101,9 @@ while(True):
     # calculate optical flow
     # print('p0',p0)
     p1, st, err = cv2.calcOpticalFlowPyrLK(old_gray, frame_gray, p0, None, **lk_params)
-    # Select good points
-    good_new = list(map(lambda p:p, p1))
+
+    # board_pts = list(map(lambda p:p, p1))
+    board_pts = list(p1)
     # print('good new', good_new)
 
     # print('gn', good_new[0])
@@ -111,7 +111,7 @@ while(True):
     # draw the tracks
     v = counter % 12
     vortex = vortexes[v]
-    frameVortex = new_warp_subimage(frame, vortex, good_new)
+    frameVortex = new_warp_subimage(frame, vortex, board_pts)
     img_arr.append(frameVortex)
     # for i,(new,old) in enumerate(zip(good_new,good_old)):
 
@@ -120,14 +120,14 @@ while(True):
         # mask = cv2.line(mask, (a,b),(c,d), color[i].tolist(), 2)
         # frame = cv2.circle(frame,(a,b),5,color[i].tolist(),-1)
     img = cv2.add(frame,mask)
-    cv2.imshow('vortex',frameVortex)
+    # cv2.imshow('vortex',frameVortex)
     # cv2.imshow('frame',img)
     k = cv2.waitKey(30) & 0xff
     if k == 27:
         break
     # Now update the previous frame and previous points
     old_gray = frame_gray.copy()
-    p0 = np.array(good_new)
+    p0 = p1
     counter = counter + 1
     print(counter)
 
