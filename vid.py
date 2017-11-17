@@ -93,7 +93,7 @@ img_arr = [firstFrameVortex,]
 mask = np.zeros_like(old_frame)
 counter = 1
 
-while(True):
+while(counter<300):
     ret,frame = cap.read()
     if frame is None:
         break
@@ -132,6 +132,6 @@ while(True):
     print(counter)
 
 # cv2.destroyAllWindows()
-write_img_array_to_video(img_arr, fps, 'VORTEX.avi')
+write_img_array_to_video(img_arr, fps, 'test_remove_corners.avi')
 # cap.release()
 

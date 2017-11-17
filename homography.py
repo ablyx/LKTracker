@@ -108,6 +108,7 @@ def new_warp_subimage(image, subimage, board_pts):
     # print('offset',offset)
     # orig_pts is of form [(u0,v0), p1, ...]
     # pts is of form [(u1, v1, u1t, v1t), (u2, v2, u2t, v2t), ...]
+    
     pts = []
     # print('to_warp_pts', to_warp_pts)
     # print('to_warp_pts', list(map(lambda p:list(p), to_warp_pts)))
@@ -126,7 +127,6 @@ def new_warp_subimage(image, subimage, board_pts):
         sm = small_mat(u, v, ut, vt)
         bm = np.vstack((bm,sm))
     h = homo_mat(bm)
-    h_inv = np.linalg.inv(h)
 
     DIST_THRESHOLD = 300
     # print(h)
@@ -155,6 +155,7 @@ def new_warp_subimage(image, subimage, board_pts):
             except:
                 # print('failed')
                 pass
+    
     # i want to get rectangle from board pts to blur
     # do median blur on 4 corners to remove purple dot first
     # do it repeatedly because dot is too big
@@ -167,8 +168,8 @@ def new_warp_subimage(image, subimage, board_pts):
     corners = [p1,p2,p3,p4]
 
     # tweak this numbers maybe.
-    CORNER_BLUR_WINDOW = 37
-    CONV_WINDOW = 21
+    CORNER_BLUR_WINDOW = 15
+    CONV_WINDOW = 33
     WW = CONV_WINDOW/2
     MEDIAN_ITER = 3
     dots = copy.deepcopy(image)
@@ -183,31 +184,14 @@ def new_warp_subimage(image, subimage, board_pts):
                     try:             
                         window = dots[i-WW:i+WW+1, j-WW:j+WW+1]
                         # print(np.average(window))
-                        image[i,j] = int(np.median(window))
+                        image[i,j] = int(np.average(window))
                     except:
                         # print('error')
                         continue
         dots = copy.deepcopy(image)
     print('dots removed')
-    """
-    # blur everything
-    box = copy.deepcopy(image)
-    AVERAGE_BLUR_WINDOW = 3
-    WW = AVERAGE_BLUR_WINDOW/2
-    # print('yrange', (int(p1[1]), int(p3[1])))
-    # print('yrange', (int(p1[0]), int(p2[0])))
-    for i in range(int(p1[1]), int(p3[1])): # y
-        for j in range(int(p1[0]), int(p2[0])): # x
-            try:
-                avg = np.average(box[i-WW:i+WW+1, j-WW:j+WW+1])
-                # print(avg)
-                image[i, j] = int(avg)
-                # print('ij', i, j, int(avg))
-            except:
-                # print('ij', i, j)
-                print('error')
-                continue
-    """
+
+    
     # blur vortex, dont blur corners
     box = copy.deepcopy(image)
     AVERAGE_BLUR_WINDOW = 5
@@ -251,6 +235,7 @@ def new_warp_subimage(image, subimage, board_pts):
                 # print('failed')
                 continue
     print('blurred')
+    
     return image
 
 
